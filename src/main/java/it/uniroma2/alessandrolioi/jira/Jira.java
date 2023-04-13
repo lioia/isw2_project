@@ -10,10 +10,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class Jira {
@@ -39,6 +39,8 @@ public class Jira {
             JiraVersion version = new JiraVersion(id, name, date);
             versions.add(version);
         }
+
+        versions.sort(Comparator.comparing(JiraVersion::releaseDate));
 
         return versions;
     }
