@@ -84,11 +84,9 @@ public class GitRepo {
         }
     }
 
-    public void clean() {
+    public boolean clean() {
         repository.close();
-        if (!recurseClean(new File(folderPath))) {
-            System.out.println("Could not delete folder");
-        }
+        return recurseClean(new File(folderPath));
     }
 
     private boolean recurseClean(File folder) {

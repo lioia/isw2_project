@@ -57,7 +57,7 @@ public class Jira {
                     "&fields=key,versions,fixVersions,resolutiondate,created" + // fields
                     "&startAt=" + startAt + // pagination offset
                     "&maxResults=1000"; // max results loaded
-            String json = getJsonFromUrl(url.replaceAll(" ", "%20"));
+            String json = getJsonFromUrl(url.replace(" ", "%20"));
             JSONObject result = new JSONObject(json);
             total = result.getInt("total");
             JSONArray jsonIssues = result.getJSONArray("issues");
@@ -95,21 +95,10 @@ public class Jira {
     public List<JiraCompleteIssue> getCompleteIssues(List<JiraVersion> versions, List<JiraIssue> issues) {
         List<JiraCompleteIssue> completeIssues = new ArrayList<>();
         for (JiraIssue issue : issues) {
-            JiraVersion injected = null;
-            JiraVersion opening = null;
-            JiraVersion fix = null;
-
-            for (JiraVersion version : versions) {
-                // Injected version is the first affected version, if present
-                if (!issue.affectedVersionsDates().isEmpty() && issue.affectedVersionsDates().get(0).isEqual(version.releaseDate()))
-                    injected = version;
-                // Opening version is set as the first release after the jira ticket was created
-                if (opening == null && version.releaseDate().isAfter(issue.created())) opening = version;
-                // Fix version is set as the first release after the jira ticket was set as resolved
-                if (fix == null && version.releaseDate().isAfter(issue.resolution())) fix = version;
-                // All variables are set, it is not necessary to search the whole list
-                if (injected != null & opening != null && fix != null) break;
-            }
+            JiraVersion[] foundVersions = getVersions(issue, versions);
+            JiraVersion injected = foundVersions[0];
+            JiraVersion opening = foundVersions[1];
+            JiraVersion fix = foundVersions[2];
 
             // There is no version that can be tagged as injected before this
             if (injected == null && opening == versions.get(0)) injected = opening;
@@ -118,6 +107,26 @@ public class Jira {
             completeIssues.add(complete);
         }
         return completeIssues;
+    }
+
+    private JiraVersion[] getVersions(JiraIssue issue, List<JiraVersion> versions) {
+        JiraVersion injected = null;
+        JiraVersion opening = null;
+        JiraVersion fix = null;
+
+        for (JiraVersion version : versions) {
+            // Injected version is the first affected version, if present
+            if (!issue.affectedVersionsDates().isEmpty() && issue.affectedVersionsDates().get(0).isEqual(version.releaseDate()))
+                injected = version;
+            // Opening version is set as the first release after the jira ticket was created
+            if (opening == null && version.releaseDate().isAfter(issue.created())) opening = version;
+            // Fix version is set as the first release after the jira ticket was set as resolved
+            if (fix == null && version.releaseDate().isAfter(issue.resolution())) fix = version;
+            // All variables are set, it is not necessary to search the whole list
+            if (injected != null && opening != null && fix != null) break;
+        }
+
+        return new JiraVersion[]{injected, opening, fix};
     }
 
     private String getJsonFromUrl(String url) throws JiraRESTException {
