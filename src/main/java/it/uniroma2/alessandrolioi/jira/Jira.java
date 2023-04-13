@@ -116,12 +116,12 @@ public class Jira {
 
         for (JiraVersion version : versions) {
             // Injected version is the first affected version, if present
-            if (!issue.affectedVersionsDates().isEmpty() && issue.affectedVersionsDates().get(0).isEqual(version.releaseDate()))
+            if (!issue.getAffectedVersionsDates().isEmpty() && issue.getAffectedVersionsDates().get(0).isEqual(version.releaseDate()))
                 injected = version;
             // Opening version is set as the first release after the jira ticket was created
-            if (opening == null && version.releaseDate().isAfter(issue.created())) opening = version;
+            if (opening == null && version.releaseDate().isAfter(issue.getCreated())) opening = version;
             // Fix version is set as the first release after the jira ticket was set as resolved
-            if (fix == null && version.releaseDate().isAfter(issue.resolution())) fix = version;
+            if (fix == null && version.releaseDate().isAfter(issue.getResolution())) fix = version;
             // All variables are set, it is not necessary to search the whole list
             if (injected != null && opening != null && fix != null) break;
         }
