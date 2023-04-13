@@ -1,6 +1,7 @@
 package it.uniroma2.alessandrolioi.jira;
 
 import it.uniroma2.alessandrolioi.jira.exceptions.JiraRESTException;
+import it.uniroma2.alessandrolioi.jira.models.JiraCompleteIssue;
 import it.uniroma2.alessandrolioi.jira.models.JiraIssue;
 import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 import org.json.JSONArray;
@@ -12,10 +13,9 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
+// TODO remove 50% of the dataset
 public class Jira {
     private final String project;
 
@@ -73,25 +73,51 @@ public class Jira {
                 }
                 LocalDate resolution = LocalDate.parse(resolutionString.substring(0, 10));
                 LocalDate created = LocalDate.parse(createdString.substring(0, 10));
-                List<LocalDate> fixVersions = getDatesFromVersions(fields.getJSONArray("fixVersions"));
-                List<LocalDate> affectedVersions = getDatesFromVersions(fields.getJSONArray("versions"));
-                JiraIssue issue = new JiraIssue(key, resolution, created, affectedVersions, fixVersions);
+                List<LocalDate> affectedVersions = new ArrayList<>();
+                JSONArray versions = fields.getJSONArray("versions");
+                for (int j = 0; j < versions.length(); j++) {
+                    JSONObject v = versions.getJSONObject(j);
+                    String date = v.getString("releaseDate");
+                    if (date == null) continue;
+                    affectedVersions.add(LocalDate.parse(date));
+                }
+                affectedVersions.sort(Comparator.naturalOrder()); // sort list
+                JiraIssue issue = new JiraIssue(key, resolution, created, affectedVersions);
                 issues.add(issue);
             }
             startAt += result.getInt("maxResults");
         } while (total - totalDecrement != issues.size());
+        Collections.reverse(issues); // sorted by key
         return issues;
     }
 
-    private List<LocalDate> getDatesFromVersions(JSONArray versions) {
-        List<LocalDate> dates = new ArrayList<>();
-        for (int i = 0; i < versions.length(); i++) {
-            JSONObject v = versions.getJSONObject(i);
-            String date = v.getString("releaseDate");
-            if (date == null) continue;
-            dates.add(LocalDate.parse(date));
+    // TODO injected can still be null, apply proportion
+    public List<JiraCompleteIssue> getCompleteIssues(List<JiraVersion> versions, List<JiraIssue> issues) {
+        List<JiraCompleteIssue> completeIssues = new ArrayList<>();
+        for (JiraIssue issue : issues) {
+            JiraVersion injected = null;
+            JiraVersion opening = null;
+            JiraVersion fix = null;
+
+            for (JiraVersion version : versions) {
+                // Injected version is the first affected version, if present
+                if (!issue.affectedVersionsDates().isEmpty() && issue.affectedVersionsDates().get(0).isEqual(version.releaseDate()))
+                    injected = version;
+                // Opening version is set as the first release after the jira ticket was created
+                if (opening == null && version.releaseDate().isAfter(issue.created())) opening = version;
+                // Fix version is set as the first release after the jira ticket was set as resolved
+                if (fix == null && version.releaseDate().isAfter(issue.resolution())) fix = version;
+                // All variables are set, it is not necessary to search the whole list
+                if (injected != null & opening != null && fix != null) break;
+            }
+
+            // There is no version that can be tagged as injected before this
+            if (injected == null && opening == versions.get(0)) injected = opening;
+
+            JiraCompleteIssue complete = new JiraCompleteIssue(issue, injected, opening, fix);
+            completeIssues.add(complete);
         }
-        return dates;
+        return completeIssues;
     }
 
     private String getJsonFromUrl(String url) throws JiraRESTException {

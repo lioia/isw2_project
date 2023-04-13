@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record JiraIssue(String key, LocalDate resolution, LocalDate created,
-                        List<LocalDate> affectedVersions, // corresponds to the `versions` field
-                        List<LocalDate> fixVersions) {
+                        // corresponds to the `version` field
+                        // sorted list, but it can be empty
+                        List<LocalDate> affectedVersionsDates
+) {
 }
