@@ -28,6 +28,12 @@
       <groupId>org.json</groupId>
       <artifactId>json</artifactId>
       <version>20230227</version>
+    <!-- Package used for managing git projects -->
+    <!-- https://mvnrepository.com/artifact/org.eclipse.jgit/org.eclipse.jgit -->
+    <dependency>
+      <groupId>org.eclipse.jgit</groupId>
+      <artifactId>org.eclipse.jgit</artifactId>
+      <version>6.5.0.202303070854-r</version>
     </dependency>
   </dependencies>
 </project>
