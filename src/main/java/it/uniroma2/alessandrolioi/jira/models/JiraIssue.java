@@ -2,7 +2,6 @@ package it.uniroma2.alessandrolioi.jira.models;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Objects;
 
 public class JiraIssue {
     private final String key;

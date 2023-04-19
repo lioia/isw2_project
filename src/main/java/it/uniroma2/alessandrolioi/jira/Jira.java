@@ -4,6 +4,7 @@ import it.uniroma2.alessandrolioi.jira.exceptions.JiraRESTException;
 import it.uniroma2.alessandrolioi.jira.models.JiraCompleteIssue;
 import it.uniroma2.alessandrolioi.jira.models.JiraIssue;
 import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
+import it.uniroma2.alessandrolioi.utils.Pair;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -14,6 +15,8 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.*;
+
+import static java.util.Arrays.stream;
 
 // TODO remove 50% of the dataset
 public class Jira {
@@ -57,31 +60,37 @@ public class Jira {
                     "&fields=key,versions,fixVersions,resolutiondate,created" + // fields
                     "&startAt=" + startAt + // pagination offset
                     "&maxResults=1000"; // max results loaded
-            String json = getJsonFromUrl(url.replace(" ", "%20"));
+            String json = getJsonFromUrl(url.replace(" ", "%20")); // Correctly format URL and get resulting json
             JSONObject result = new JSONObject(json);
-            total = result.getInt("total");
+            total = result.getInt("total"); // total number of issues
             JSONArray jsonIssues = result.getJSONArray("issues");
+            // Iterate through all the issues
             for (int i = 0; i < jsonIssues.length(); i++) {
                 JSONObject jsonIssue = jsonIssues.getJSONObject(i);
                 JSONObject fields = jsonIssue.getJSONObject("fields");
-                String key = jsonIssue.getString("key");
+                String key = jsonIssue.getString("key"); // e.s. BOOKKEEPER-1
                 String resolutionString = fields.getString("resolutiondate");
                 String createdString = fields.getString("created");
+                // The issue does not have the required information, so it can be skipped
                 if (key == null || resolutionString == null || createdString == null) {
                     totalDecrement += 1;
                     continue;
                 }
+                // Parse the dates
                 LocalDate resolution = LocalDate.parse(resolutionString.substring(0, 10));
                 LocalDate created = LocalDate.parse(createdString.substring(0, 10));
-                List<LocalDate> affectedVersions = new ArrayList<>();
-                JSONArray versions = fields.getJSONArray("versions");
-                for (int j = 0; j < versions.length(); j++) {
-                    JSONObject v = versions.getJSONObject(j);
-                    String date = v.getString("releaseDate");
-                    if (date == null) continue;
-                    affectedVersions.add(LocalDate.parse(date));
-                }
-                affectedVersions.sort(Comparator.naturalOrder()); // sort list
+                // Get the highest fix version on Jira
+                // Case: issue was reopened multiple times (so there are more than one fix version) ~ resolutiondate is only for the first one | BOOKKEEPER - 695
+                List<LocalDate> fixVersions = getVersionsFromJsonArray(fields.getJSONArray("fixVersions"));
+                // Case: multiple fix versions (after resolution date) | BOOKKEEPER-695
+                Optional<LocalDate> fix = fixVersions.stream().max(Comparator.naturalOrder());
+                // Replace the current resolution date to the fix version on Jira (sometimes the issue is reopened, but the resolution date is not updated)
+                // Case: fix version on Jira has a release date after the created field | i.e. BOOKKEEPER-774
+                if (fix.isPresent() && fix.get().isAfter(created)) resolution = fix.get();
+                // Get affected versions from Jira and sort them
+                List<LocalDate> affectedVersions = getVersionsFromJsonArray(fields.getJSONArray("versions"));
+                affectedVersions.sort(Comparator.naturalOrder());
+
                 JiraIssue issue = new JiraIssue(key, resolution, created, affectedVersions);
                 issues.add(issue);
             }
@@ -95,38 +104,81 @@ public class Jira {
     public List<JiraCompleteIssue> getCompleteIssues(List<JiraVersion> versions, List<JiraIssue> issues) {
         List<JiraCompleteIssue> completeIssues = new ArrayList<>();
         for (JiraIssue issue : issues) {
-            JiraVersion[] foundVersions = getVersions(issue, versions);
-            JiraVersion injected = foundVersions[0];
-            JiraVersion opening = foundVersions[1];
-            JiraVersion fix = foundVersions[2];
+            LocalDate firstReleaseDate = versions.get(0).releaseDate();
 
-            // There is no version that can be tagged as injected before this
-            if (injected == null && opening == versions.get(0)) injected = opening;
+            // Skipping the issues created and resolved before the first Jira release
+            // IV, OV and FV should be the first release (it can cause problem when calculating proportion)
+            if (issue.getCreated().isBefore(firstReleaseDate) && issue.getResolution().isBefore(firstReleaseDate))
+                continue;
 
-            JiraCompleteIssue complete = new JiraCompleteIssue(issue, injected, opening, fix);
+            // Find IV, OV and FV from Jira API (based on `created`, `resolution` and the first affectedVersion
+            List<Pair<JiraVersion, Integer>> foundVersions = getVersions(issue, versions);
+            Pair<JiraVersion, Integer> injected = foundVersions.get(0);
+            JiraVersion injectedVersion = null;
+            if (injected != null) injectedVersion = injected.first();
+            Pair<JiraVersion, Integer> opening = foundVersions.get(1);
+            Pair<JiraVersion, Integer> fix = foundVersions.get(2);
+
+            // Case: affected version in Jira is after the fix version (based on resolutiondate) | i.e. BOOKKEEPER-374
+            // Affected versions in Jira is incorrect, so the injected version is invalid
+            if (!issue.getAffectedVersionsDates().isEmpty() && issue.getAffectedVersionsDates().get(0).isAfter(fix.first().releaseDate())) {
+                issue.getAffectedVersionsDates().clear();
+                injected = null;
+                injectedVersion = null;
+            }
+
+            int fvOvDifference = fix.second() - opening.second(); // This should always be present
+            int fvIvDifference = 0; // This can be 0 if there is no injected version
+
+            // from Proportion paper step d.3 on page 13 (so the denominator won't cause any problems)
+            if (fvOvDifference == 0 && opening.first() != versions.get(0)) fvOvDifference = 1;
+
+            // No injected version was found but the opening version is the first release
+            // So the injected must be the first release as well
+            if (injected == null && opening.first() == versions.get(0)) injectedVersion = opening.first();
+
+            // If the injected version is present (from affectedVersion, or it can be derived as the first release)
+            // The FV-IV can be calculated
+            if (injected != null)
+                fvIvDifference = fix.second() - injected.second();
+
+            JiraCompleteIssue complete = new JiraCompleteIssue(issue, injectedVersion, opening.first(), fix.first(), fvOvDifference, fvIvDifference);
             completeIssues.add(complete);
         }
         return completeIssues;
     }
 
-    private JiraVersion[] getVersions(JiraIssue issue, List<JiraVersion> versions) {
-        JiraVersion injected = null;
-        JiraVersion opening = null;
-        JiraVersion fix = null;
+    private List<Pair<JiraVersion, Integer>> getVersions(JiraIssue issue, List<JiraVersion> versions) {
+        Pair<JiraVersion, Integer> injected = null;
+        Pair<JiraVersion, Integer> opening = null;
+        Pair<JiraVersion, Integer> fix = null;
 
-        for (JiraVersion version : versions) {
+        for (int i = 0; i < versions.size(); i++) {
+            JiraVersion version = versions.get(i);
             // Injected version is the first affected version, if present
-            if (!issue.getAffectedVersionsDates().isEmpty() && issue.getAffectedVersionsDates().get(0).isEqual(version.releaseDate()))
-                injected = version;
+            if (injected == null && !issue.getAffectedVersionsDates().isEmpty() && issue.getAffectedVersionsDates().get(0).isEqual(version.releaseDate()))
+                injected = new Pair<>(version, i);
             // Opening version is set as the first release after the jira ticket was created
-            if (opening == null && version.releaseDate().isAfter(issue.getCreated())) opening = version;
+            if (opening == null && version.releaseDate().isAfter(issue.getCreated())) opening = new Pair<>(version, i);
             // Fix version is set as the first release after the jira ticket was set as resolved
-            if (fix == null && version.releaseDate().isAfter(issue.getResolution())) fix = version;
+            if (fix == null && (version.releaseDate().isAfter(issue.getResolution()) || version.releaseDate().isEqual(issue.getResolution())))
+                fix = new Pair<>(version, i);
             // All variables are set, it is not necessary to search the whole list
             if (injected != null && opening != null && fix != null) break;
         }
 
-        return new JiraVersion[]{injected, opening, fix};
+        return Arrays.asList(injected, opening, fix);
+    }
+
+    private List<LocalDate> getVersionsFromJsonArray(JSONArray array) {
+        List<LocalDate> versions = new ArrayList<>();
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject o = array.getJSONObject(i);
+            String dateString = o.getString("releaseDate");
+            LocalDate date = LocalDate.parse(dateString);
+            versions.add(date);
+        }
+        return versions;
     }
 
     private String getJsonFromUrl(String url) throws JiraRESTException {

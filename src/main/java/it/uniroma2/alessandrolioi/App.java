@@ -31,8 +31,8 @@ public class App {
             List<JiraIssue> issues = jira.loadIssues();
             List<JiraCompleteIssue> completeIssues = jira.getCompleteIssues(versions, issues);
             for (JiraCompleteIssue i : completeIssues) {
-                String injected = i.getInjected() != null ? i.getInjected().name() : "(not present)";
-                System.out.printf("%s | IV: %s, OV: %s, FV: %s%n", i.getKey(), injected, i.getOpening().name(), i.getFix().name());
+                String injected = i.getInjected() != null ? i.getInjected().name() : "x.x.x";
+                System.out.printf("%s | IV: %s, OV: %s, FV: %s | FV-IV: %d, FV-OV: %d%n", i.getKey(), injected, i.getOpening().name(), i.getFix().name(), i.getFvIvDifference(), i.getFvOvDifference());
             }
         } catch (JiraRESTException e) {
             throw new RuntimeException(e);
