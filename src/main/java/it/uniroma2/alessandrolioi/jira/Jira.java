@@ -131,10 +131,6 @@ public class Jira {
             Pair<JiraVersion, Integer> opening = foundVersions.get(1);
             Pair<JiraVersion, Integer> fix = foundVersions.get(2);
 
-            if (fix == null) {
-                System.out.println();
-            }
-
             // Case: affected version in Jira is after the fix version (based on resolutiondate) | i.e. BOOKKEEPER-374
             // Affected versions in Jira is incorrect, so the injected version is invalid
             if (!issue.getAffectedVersionsDates().isEmpty() && issue.getAffectedVersionsDates().get(0).isAfter(fix.first().releaseDate())) {
