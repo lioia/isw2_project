@@ -80,7 +80,7 @@ public class Jira {
                 LocalDate resolution = LocalDate.parse(resolutionString.substring(0, 10));
                 LocalDate created = LocalDate.parse(createdString.substring(0, 10));
                 // Skipping issues created after the last version considered
-                if(created.isAfter(lastVersion)) {
+                if (created.isAfter(lastVersion)) {
                     totalDecrement += 1;
                     continue;
                 }
@@ -158,6 +158,22 @@ public class Jira {
             completeIssues.add(complete);
         }
         return completeIssues;
+    }
+
+    public void applyProportion(List<JiraCompleteIssue> issues, List<JiraVersion> versions) {
+        /*
+        * TODO:
+        *  decide how to calculate proportion p (~ read papers)
+        *  set injected version with index: FV - (FV-OV)*p
+        * */
+        int total = 0;
+        for (JiraCompleteIssue issue : issues) {
+            // Don't apply proportion on issue with IV
+            if(issue.getInjected() != null) continue;
+            System.out.printf("%s%n", issue.getKey());
+            total += 1;
+        }
+        System.out.println(total);
     }
 
     private List<Pair<JiraVersion, Integer>> getVersions(JiraIssue issue, List<JiraVersion> versions) {

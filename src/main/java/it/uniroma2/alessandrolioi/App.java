@@ -25,11 +25,12 @@ public class App {
             Objects.requireNonNull(repo).clean();
         }
 
-        Jira jira = new Jira("bookkeepers");
+        Jira jira = new Jira("bookkeeper");
         try {
             List<JiraVersion> versions = jira.loadVersions();
             List<JiraIssue> issues = jira.loadIssues(versions.get(versions.size() - 1).releaseDate());
             List<JiraCompleteIssue> completeIssues = jira.getCompleteIssues(versions, issues);
+            jira.applyProportion(completeIssues, versions);
             for (JiraCompleteIssue i : completeIssues) {
                 String injected = i.getInjected() != null ? i.getInjected().name() : "x.x.x";
                 System.out.printf("%s | IV: %s, OV: %s, FV: %s | FV-IV: %d, FV-OV: %d%n", i.getKey(), injected, i.getOpening().name(), i.getFix().name(), i.getFvIvDifference(), i.getFvOvDifference());
