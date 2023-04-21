@@ -25,10 +25,10 @@ public class App {
             Objects.requireNonNull(repo).clean();
         }
 
-        Jira jira = new Jira("bookkeeper");
+        Jira jira = new Jira("bookkeepers");
         try {
             List<JiraVersion> versions = jira.loadVersions();
-            List<JiraIssue> issues = jira.loadIssues();
+            List<JiraIssue> issues = jira.loadIssues(versions.get(versions.size() - 1).releaseDate());
             List<JiraCompleteIssue> completeIssues = jira.getCompleteIssues(versions, issues);
             for (JiraCompleteIssue i : completeIssues) {
                 String injected = i.getInjected() != null ? i.getInjected().name() : "x.x.x";
