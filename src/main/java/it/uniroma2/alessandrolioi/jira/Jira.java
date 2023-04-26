@@ -163,7 +163,7 @@ public class Jira {
 
     public double calculateProportionColdStart(List<JiraCompleteIssue> issues) {
         List<JiraCompleteIssue> filter = issues.stream().filter(i -> i.getFvIvDifference() != 0 && i.getFvOvDifference() != 0).toList();
-        List<Double> proportions = filter.stream().map(i -> (double) (i.getFvOvDifference() / i.getFvIvDifference())).toList();
+        List<Double> proportions = filter.stream().map(i -> (double) i.getFvOvDifference() / i.getFvIvDifference()).toList();
         return calculateMean(proportions);
     }
 
@@ -177,7 +177,7 @@ public class Jira {
                 if (issue.getOpening().releaseDate().isAfter(version.releaseDate())) continue;
                 // Issues with every version (used to calculate proportion)
                 if (issue.getFvOvDifference() != 0 && issue.getFvIvDifference() != 0) {
-                    proportions.add((double) (issue.getFvOvDifference() / issue.getFvIvDifference()));
+                    proportions.add((double) issue.getFvOvDifference() / issue.getFvIvDifference());
                 } else {
                     // Invalid instances (injected is missing -> use proportion)
                     invalid.add(issue);
@@ -189,10 +189,8 @@ public class Jira {
             // Apply proportion
             for (JiraCompleteIssue issue : invalid) {
                 int fvIvDifference = (int) Math.ceil(issue.getFvOvDifference() * proportion);
-                int ov = versions.indexOf(issue.getOpening());
                 int fv = versions.indexOf(issue.getFix());
                 int iv = Math.max(fv - fvIvDifference, 0); // it's an index, so it cannot be a negative number
-                if (iv > ov) iv = ov; // IV is always before OV (consistency check)
                 JiraVersion injected = versions.get(iv);
                 issue.setInjected(injected, fvIvDifference);
             }
