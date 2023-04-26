@@ -1,7 +1,6 @@
 package it.uniroma2.alessandrolioi.jira;
 
 import it.uniroma2.alessandrolioi.jira.exceptions.JiraRESTException;
-import it.uniroma2.alessandrolioi.jira.models.JiraCompleteIssue;
 import it.uniroma2.alessandrolioi.jira.models.JiraIssue;
 import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 import it.uniroma2.alessandrolioi.utils.Pair;
@@ -16,12 +15,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.*;
 
-/*
- * TODO(refactor)
- *   assign tickets to versions (not the other way around)
- *   so every version has a list of injected, opening and fixed issues
- *   and every issue has the index of the injected, opening and fixed version
- * */
 public class Jira {
     private final String project;
 
@@ -115,8 +108,7 @@ public class Jira {
         return issues;
     }
 
-    public List<JiraCompleteIssue> getCompleteIssues(List<JiraVersion> versions, List<JiraIssue> issues) {
-        List<JiraCompleteIssue> completeIssues = new ArrayList<>();
+    public void classifyIssues(List<JiraVersion> versions, List<JiraIssue> issues) {
         for (JiraIssue issue : issues) {
             LocalDate firstReleaseDate = versions.get(0).releaseDate();
 
@@ -141,66 +133,69 @@ public class Jira {
                 injectedVersion = null;
             }
 
-            // This should always be present
-            // If the opening and the fix is the same version, is set to 1 (Proportion Paper page 13.(d).(iii))
-            int fvOvDifference = Math.max(1, fix.second() - opening.second()); // This should always be present
-            int fvIvDifference = 0; // This is 0 if there is no injected version
-
             // No injected version was found but the opening version is the first release
             // So the injected must be the first release as well
             if (injected == null && opening.first() == versions.get(0)) injectedVersion = opening.first();
 
-            // If the injected version is present (from affectedVersion, or it can be derived as the first release)
-            // The FV-IV can be calculated
-            if (injected != null)
-                fvIvDifference = fix.second() - injected.second();
+            // Injected version is present (from affectedVersion, or derived as the first release)
+            if (injected != null) {
+                issue.setIvIndex(injected.second());
+                injectedVersion.injected().add(issue);
+            }
+            issue.setOvIndex(opening.second());
+            issue.setFvIndex(fix.second());
 
-            JiraCompleteIssue complete = new JiraCompleteIssue(issue, injectedVersion, opening.first(), fix.first(), fvOvDifference, fvIvDifference);
-            completeIssues.add(complete);
+            opening.first().opened().add(issue);
+            fix.first().fixed().add(issue);
         }
-        return completeIssues;
     }
 
-    public double calculateProportionColdStart(List<JiraCompleteIssue> issues) {
-        List<JiraCompleteIssue> filter = issues.stream().filter(i -> i.getFvIvDifference() != 0 && i.getFvOvDifference() != 0).toList();
-        List<Double> proportions = filter.stream().map(i -> (double) i.getFvOvDifference() / i.getFvIvDifference()).toList();
-        return calculateMean(proportions);
+    public double calculateProportionColdStart(List<JiraIssue> issues) {
+        // Get issues with valid IV (OV and FV should always be present)
+        List<JiraIssue> filter = issues.stream().filter(i -> i.getIvIndex() != -1).toList();
+        List<Double> proportions = filter.stream().map(JiraIssue::calculateProportion).toList();
+        double sum = 0f;
+        for (double value : proportions) sum += value;
+        return sum / proportions.size();
     }
 
-    public void applyProportionIncrement(List<JiraCompleteIssue> issues, List<JiraVersion> versions, double proportionColdStart) {
+    public void applyProportionIncrement(List<JiraVersion> versions, double proportionColdStart) {
+        // Sum from release 1 to R-1
+        double lastSum = 0f;
+        // Issues from release 1 to R-1
+        int totalIssues = 0;
         // For each version R
         for (JiraVersion version : versions) {
-            List<JiraCompleteIssue> invalid = new ArrayList<>();
-            List<Double> proportions = new ArrayList<>();
-            for (JiraCompleteIssue issue : issues) {
-                // Not considering issues after the current version
-                if (issue.getOpening().releaseDate().isAfter(version.releaseDate())) continue;
-                // Issues with every version (used to calculate proportion)
-                if (issue.getFvOvDifference() != 0 && issue.getFvIvDifference() != 0) {
-                    proportions.add((double) issue.getFvOvDifference() / issue.getFvIvDifference());
-                } else {
-                    // Invalid instances (injected is missing -> use proportion)
-                    invalid.add(issue);
-                }
+            // Issues used to calculate proportion
+            List<JiraIssue> valid = version.fixed().stream().filter(i -> i.getIvIndex() != -1).toList();
+            double proportion = proportionColdStart; // use coldStart if there are less than 5 issues
+            if (valid.size() >= 5) {
+                List<Double> proportions = valid.stream().map(JiraIssue::calculateProportion).toList();
+                double currentSum = proportions.stream().reduce(0.0, Double::sum);
+                /*
+                 * Incremental Proportion
+                 *   lastSum: sum of proportions from release 1 to R-1
+                 *   (lastProportion * totalIssues) + currentSum: sum of proportions from release 1 to R
+                 *   ((lastProportion * totalIssues) + currentSum) / (totalIssues + valid.size): proportion mean
+                 * */
+                proportion = (lastSum + currentSum) / (totalIssues + valid.size());
+                lastSum += currentSum;
             }
-            // If there are less than 5 valid issues, use cold start
-            double proportion = proportionColdStart;
-            if (proportions.size() >= 5) proportion = calculateMean(proportions);
-            // Apply proportion
-            for (JiraCompleteIssue issue : invalid) {
-                int fvIvDifference = (int) Math.ceil(issue.getFvOvDifference() * proportion);
-                int fv = versions.indexOf(issue.getFix());
-                int iv = Math.max(fv - fvIvDifference, 0); // it's an index, so it cannot be a negative number
-                JiraVersion injected = versions.get(iv);
-                issue.setInjected(injected, fvIvDifference);
+            // Get issue opened in this release without IV
+            List<JiraIssue> invalid = new ArrayList<>(version.opened());
+            invalid.removeAll(valid);
+            for (JiraIssue invalidIssue : invalid) {
+                // Calculate IV = FV - (FV - OV) * P
+                int iv = (int) (invalidIssue.getFvIndex() - invalidIssue.getFvMinusOv() * proportion);
+                // Save IV
+                invalidIssue.setIvIndex(iv);
+                // Add current issue to the list of proportions
+                lastSum += invalidIssue.calculateProportion();
+                // Labeling: add issue to version corresponding to IV
+                versions.get(iv).injected().add(invalidIssue);
             }
+            totalIssues += version.opened().size();
         }
-    }
-
-    private double calculateMean(List<Double> values) {
-        double sum = 0f;
-        for (double value : values) sum += value;
-        return sum / values.size();
     }
 
     private List<Pair<JiraVersion, Integer>> getVersions(JiraIssue issue, List<JiraVersion> versions) {
