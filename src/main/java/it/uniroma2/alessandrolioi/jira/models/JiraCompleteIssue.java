@@ -3,7 +3,7 @@ package it.uniroma2.alessandrolioi.jira.models;
 import java.util.List;
 
 public class JiraCompleteIssue extends JiraIssue {
-    private final JiraVersion injected;
+    private JiraVersion injected;
     private final JiraVersion opening;
     private final JiraVersion fix;
     private final int fvOvDifference;
@@ -42,7 +42,8 @@ public class JiraCompleteIssue extends JiraIssue {
         return fvIvDifference;
     }
 
-    public void setFvIvDifference(int fvIvDifference) {
+    public void setInjected(JiraVersion injected, int fvIvDifference) {
+        this.injected = injected;
         this.fvIvDifference = fvIvDifference;
     }
 }

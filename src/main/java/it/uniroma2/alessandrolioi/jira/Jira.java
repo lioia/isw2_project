@@ -16,8 +16,12 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.*;
 
-import static java.util.Arrays.stream;
-
+/*
+ * TODO(refactor)
+ *   assign tickets to versions (not the other way around)
+ *   so every version has a list of injected, opening and fixed issues
+ *   and every issue has the index of the injected, opening and fixed version
+ * */
 public class Jira {
     private final String project;
 
@@ -48,7 +52,7 @@ public class Jira {
         return versions;
     }
 
-    public List<JiraIssue> loadIssues(LocalDate lastVersion) throws JiraRESTException {
+    public List<JiraIssue> loadIssues(LocalDate firstVersion, LocalDate lastVersion) throws JiraRESTException {
         List<JiraIssue> issues = new ArrayList<>();
         int total;
         int totalDecrement = 0; // total skipped issues (missing required fields)
@@ -57,10 +61,15 @@ public class Jira {
             String url = "https://issues.apache.org/jira/rest/api/2/search" +
                     "?jql=project=" + project + // selecting the project
                     " AND issueType=Bug AND(status=closed OR status=resolved)AND resolution=fixed" + // query to get all bug fix issues
+                    // select issues resolved in [firstVersion, lastVersion]
+                    " AND resolved>=%s AND resolved<=%s".formatted(firstVersion.toString(), lastVersion.toString()) +
                     "&fields=key,versions,fixVersions,resolutiondate,created" + // fields
                     "&startAt=" + startAt + // pagination offset
                     "&maxResults=1000"; // max results loaded
-            String json = getJsonFromUrl(url.replace(" ", "%20")); // Correctly format URL and get resulting json
+            // Correctly format URL
+            String correctedUrl = url.replace(" ", "%20").replace(">=", "%3E%3D").replace("<=", "%3C%3D");
+            // Load JSON
+            String json = getJsonFromUrl(correctedUrl);
             JSONObject result = new JSONObject(json);
             total = result.getInt("total"); // total number of issues
             JSONArray jsonIssues = result.getJSONArray("issues");
@@ -79,11 +88,6 @@ public class Jira {
                 // Parse the dates
                 LocalDate resolution = LocalDate.parse(resolutionString.substring(0, 10));
                 LocalDate created = LocalDate.parse(createdString.substring(0, 10));
-                // Skipping issues created after the last version considered
-                if (created.isAfter(lastVersion)) {
-                    totalDecrement += 1;
-                    continue;
-                }
                 // Get the highest fix version on Jira
                 // Case: issue was reopened multiple times (so there are more than one fix version) ~ resolutiondate is only for the first one | BOOKKEEPER - 695
                 List<LocalDate> fixVersions = getVersionsFromJsonArray(fields.getJSONArray("fixVersions"));
@@ -92,8 +96,7 @@ public class Jira {
                 // Replace the current resolution date to the fix version on Jira (sometimes the issue is reopened, but the resolution date is not updated)
                 // Case: fix version on Jira has a release date after the created field | i.e. BOOKKEEPER-774
                 if (fix.isPresent() && fix.get().isAfter(created)) resolution = fix.get();
-
-                // Skipping issues resolved after the last version considered
+                // Skipping tickets reopened that have a fix version after the last version considered
                 if (resolution.isAfter(lastVersion)) {
                     totalDecrement += 1;
                     continue;
@@ -112,7 +115,6 @@ public class Jira {
         return issues;
     }
 
-    // TODO injected can still be null, apply proportion
     public List<JiraCompleteIssue> getCompleteIssues(List<JiraVersion> versions, List<JiraIssue> issues) {
         List<JiraCompleteIssue> completeIssues = new ArrayList<>();
         for (JiraIssue issue : issues) {
@@ -139,11 +141,10 @@ public class Jira {
                 injectedVersion = null;
             }
 
-            int fvOvDifference = fix.second() - opening.second(); // This should always be present
-            int fvIvDifference = 0; // This can be 0 if there is no injected version
-
-            // from Proportion paper step d.3 on page 13 (so the denominator won't cause any problems)
-            if (fvOvDifference == 0 && opening.first() != versions.get(0)) fvOvDifference = 1;
+            // This should always be present
+            // If the opening and the fix is the same version, is set to 1 (Proportion Paper page 13.(d).(iii))
+            int fvOvDifference = Math.max(1, fix.second() - opening.second()); // This should always be present
+            int fvIvDifference = 0; // This is 0 if there is no injected version
 
             // No injected version was found but the opening version is the first release
             // So the injected must be the first release as well
@@ -160,20 +161,48 @@ public class Jira {
         return completeIssues;
     }
 
-    public void applyProportion(List<JiraCompleteIssue> issues, List<JiraVersion> versions) {
-        /*
-        * TODO:
-        *  decide how to calculate proportion p (~ read papers)
-        *  set injected version with index: FV - (FV-OV)*p
-        * */
-        int total = 0;
-        for (JiraCompleteIssue issue : issues) {
-            // Don't apply proportion on issue with IV
-            if(issue.getInjected() != null) continue;
-            System.out.printf("%s%n", issue.getKey());
-            total += 1;
+    public double calculateProportionColdStart(List<JiraCompleteIssue> issues) {
+        List<JiraCompleteIssue> filter = issues.stream().filter(i -> i.getFvIvDifference() != 0 && i.getFvOvDifference() != 0).toList();
+        List<Double> proportions = filter.stream().map(i -> (double) (i.getFvOvDifference() / i.getFvIvDifference())).toList();
+        return calculateMean(proportions);
+    }
+
+    public void applyProportionIncrement(List<JiraCompleteIssue> issues, List<JiraVersion> versions, double proportionColdStart) {
+        // For each version R
+        for (JiraVersion version : versions) {
+            List<JiraCompleteIssue> invalid = new ArrayList<>();
+            List<Double> proportions = new ArrayList<>();
+            for (JiraCompleteIssue issue : issues) {
+                // Not considering issues after the current version
+                if (issue.getOpening().releaseDate().isAfter(version.releaseDate())) continue;
+                // Issues with every version (used to calculate proportion)
+                if (issue.getFvOvDifference() != 0 && issue.getFvIvDifference() != 0) {
+                    proportions.add((double) (issue.getFvOvDifference() / issue.getFvIvDifference()));
+                } else {
+                    // Invalid instances (injected is missing -> use proportion)
+                    invalid.add(issue);
+                }
+            }
+            // If there are less than 5 valid issues, use cold start
+            double proportion = proportionColdStart;
+            if (proportions.size() >= 5) proportion = calculateMean(proportions);
+            // Apply proportion
+            for (JiraCompleteIssue issue : invalid) {
+                int fvIvDifference = (int) Math.ceil(issue.getFvOvDifference() * proportion);
+                int ov = versions.indexOf(issue.getOpening());
+                int fv = versions.indexOf(issue.getFix());
+                int iv = Math.max(fv - fvIvDifference, 0); // it's an index, so it cannot be a negative number
+                if (iv > ov) iv = ov; // IV is always before OV (consistency check)
+                JiraVersion injected = versions.get(iv);
+                issue.setInjected(injected, fvIvDifference);
+            }
         }
-        System.out.println(total);
+    }
+
+    private double calculateMean(List<Double> values) {
+        double sum = 0f;
+        for (double value : values) sum += value;
+        return sum / values.size();
     }
 
     private List<Pair<JiraVersion, Integer>> getVersions(JiraIssue issue, List<JiraVersion> versions) {
@@ -189,7 +218,7 @@ public class Jira {
             // Opening version is set as the first release after the jira ticket was created
             if (opening == null && version.releaseDate().isAfter(issue.getCreated())) opening = new Pair<>(version, i);
             // Fix version is set as the first release after the jira ticket was set as resolved
-            if (fix == null && (version.releaseDate().isAfter(issue.getResolution()) || version.releaseDate().isEqual(issue.getResolution())))
+            if (fix == null && !version.releaseDate().isBefore(issue.getResolution()))
                 fix = new Pair<>(version, i);
             // All variables are set, it is not necessary to search the whole list
             if (injected != null && opening != null && fix != null) break;
