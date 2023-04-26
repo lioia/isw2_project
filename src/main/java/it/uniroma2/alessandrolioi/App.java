@@ -25,17 +25,27 @@ public class App {
             Objects.requireNonNull(repo).clean();
         }
 
-        Jira jira = new Jira("bookkeeper");
+        Jira bookkeeper = new Jira("bookkeeper");
         try {
-            List<JiraVersion> versions = jira.loadVersions();
-            List<JiraIssue> issues = jira.loadIssues();
-            List<JiraCompleteIssue> completeIssues = jira.getCompleteIssues(versions, issues);
-            for (JiraCompleteIssue i : completeIssues) {
-                String injected = i.getInjected() != null ? i.getInjected().name() : "(not present)";
-                System.out.printf("%s | IV: %s, OV: %s, FV: %s%n", i.getKey(), injected, i.getOpening().name(), i.getFix().name());
+            List<JiraVersion> bookkeeperVersions = bookkeeper.loadVersions();
+            List<JiraIssue> bookkeeperIssues = bookkeeper.loadIssues(bookkeeperVersions.get(0).releaseDate(), bookkeeperVersions.get(bookkeeperVersions.size() - 1).releaseDate());
+            List<JiraCompleteIssue> bookkeeperCompleteIssues = bookkeeper.getCompleteIssues(bookkeeperVersions, bookkeeperIssues);
+            double avroColdStart = calculateColdStart("avro");
+            bookkeeper.applyProportionIncrement(bookkeeperCompleteIssues, bookkeeperVersions, avroColdStart);
+            for (JiraCompleteIssue i : bookkeeperCompleteIssues) {
+                String injected = i.getInjected() != null ? i.getInjected().name() : "x.x.x";
+                System.out.printf("%s | IV: %s, OV: %s, FV: %s | FV-IV: %d, FV-OV: %d%n", i.getKey(), injected, i.getOpening().name(), i.getFix().name(), i.getFvIvDifference(), i.getFvOvDifference());
             }
         } catch (JiraRESTException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static double calculateColdStart(String project) throws JiraRESTException {
+        Jira avro = new Jira(project);
+        List<JiraVersion> avroVersions = avro.loadVersions();
+        List<JiraIssue> avroIssues = avro.loadIssues(avroVersions.get(0).releaseDate(), avroVersions.get(avroVersions.size() - 1).releaseDate());
+        List<JiraCompleteIssue> avroCompleteIssues = avro.getCompleteIssues(avroVersions, avroIssues);
+        return avro.calculateProportionColdStart(avroCompleteIssues);
     }
 }
