@@ -9,4 +9,9 @@ public record JiraVersion(String id, String name, LocalDate releaseDate,
     public JiraVersion(String id, String name, LocalDate releaseDate) {
         this(id, name, releaseDate, new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
     }
+
+    // JSON named fields
+    public static final String ID = "id";
+    public static final String NAME = "name";
+    public static final String RELEASE_DATE = "releaseDate";
 }
