@@ -5,12 +5,12 @@ import java.util.List;
 
 public final class JiraIssue {
     // JSON named fields
-    public static final String KEY = "key";
-    public static final String VERSIONS = "versions";
-    public static final String FIX_VERSIONS = "fixVersions";
-    public static final String RESOLUTION_DATE = "resolutiondate";
-    public static final String CREATED = "created";
-    public static final String[] FIELDS = {KEY, VERSIONS, FIX_VERSIONS, RESOLUTION_DATE, CREATED};
+    public static final String KEY_FIELD = "key";
+    public static final String VERSIONS_FIELD = "versions";
+    public static final String FIX_VERSIONS_FIELD = "fixVersions";
+    public static final String RESOLUTION_DATE_FIELD = "resolutiondate";
+    public static final String CREATED_FIELD = "created";
+    private static final String[] FIELDS = {KEY_FIELD, VERSIONS_FIELD, FIX_VERSIONS_FIELD, RESOLUTION_DATE_FIELD, CREATED_FIELD};
 
     private final String key;
     private final LocalDate resolution;
@@ -88,5 +88,9 @@ public final class JiraIssue {
 
     public void setFvIndex(int fvIndex) {
         this.fvIndex = fvIndex;
+    }
+
+    public static String getFields() {
+        return String.join(",", FIELDS);
     }
 }
