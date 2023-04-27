@@ -4,6 +4,14 @@ import java.time.LocalDate;
 import java.util.List;
 
 public final class JiraIssue {
+    // JSON named fields
+    public static final String KEY = "key";
+    public static final String VERSIONS = "versions";
+    public static final String FIX_VERSIONS = "fixVersions";
+    public static final String RESOLUTION_DATE = "resolutiondate";
+    public static final String CREATED = "created";
+    public static final String[] FIELDS = {KEY, VERSIONS, FIX_VERSIONS, RESOLUTION_DATE, CREATED};
+
     private final String key;
     private final LocalDate resolution;
     private final LocalDate created;
