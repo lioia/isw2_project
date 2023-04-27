@@ -88,12 +88,8 @@ public class Jira {
                 Optional<LocalDate> fix = fixVersions.stream().max(Comparator.naturalOrder());
                 // Replace the current resolution date to the fix version on Jira (sometimes the issue is reopened, but the resolution date is not updated)
                 // Case: fix version on Jira has a release date after the created field | i.e. BOOKKEEPER-774
-                if (fix.isPresent() && fix.get().isAfter(created)) resolution = fix.get();
-                // Skipping tickets reopened that have a fix version after the last version considered
-                if (resolution.isAfter(lastVersion)) {
-                    totalDecrement += 1;
-                    continue;
-                }
+                //       (BOOKKEEPER-774 is not present in the issue list because it's after the last version considered)
+                if (fix.isPresent() && fix.get().isAfter(created) && !fix.get().isAfter(lastVersion)) resolution = fix.get();
 
                 // Get affected versions from Jira and sort them
                 List<LocalDate> affectedVersions = getVersionsFromJsonArray(fields.getJSONArray("versions"));
