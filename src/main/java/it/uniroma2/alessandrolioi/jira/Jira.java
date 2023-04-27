@@ -30,11 +30,11 @@ public class Jira {
         // Loading only 50% of releases (for better dataset accuracy ~ snoring problem)
         for (int i = 0; i < Math.ceilDiv(jsonVersions.length(), 2); i++) {
             JSONObject jsonVersion = jsonVersions.getJSONObject(i);
-            String id = jsonVersion.getString(JiraVersion.ID);
-            String name = jsonVersion.getString(JiraVersion.NAME);
+            String id = jsonVersion.getString(JiraVersion.ID_FIELD);
+            String name = jsonVersion.getString(JiraVersion.NAME_FIELD);
             // Skipping versions that do not have a release date (only required field)
-            if (!jsonVersion.has(JiraVersion.RELEASE_DATE)) continue;
-            String releaseDateString = jsonVersion.getString(JiraVersion.RELEASE_DATE);
+            if (!jsonVersion.has(JiraVersion.RELEASE_DATE_FIELD)) continue;
+            String releaseDateString = jsonVersion.getString(JiraVersion.RELEASE_DATE_FIELD);
             LocalDate date = LocalDate.parse(releaseDateString);
             JiraVersion version = new JiraVersion(id, name, date);
             versions.add(version);
@@ -56,7 +56,7 @@ public class Jira {
                     " AND issueType=Bug AND(status=closed OR status=resolved)AND resolution=fixed" + // query to get all bug fix issues
                     // select issues resolved in [firstVersion, lastVersion]
                     " AND resolved>=%s AND resolved<=%s".formatted(firstVersion.toString(), lastVersion.toString()) +
-                    "&fields=" + String.join(",", JiraIssue.FIELDS) + // fields
+                    "&fields=" + String.join(",", JiraIssue.getFields()) + // fields
                     "&startAt=" + startAt + // pagination offset
                     "&maxResults=1000"; // max results loaded
             // Correctly format URL
@@ -71,28 +71,29 @@ public class Jira {
                 JSONObject jsonIssue = jsonIssues.getJSONObject(i);
                 JSONObject fields = jsonIssue.getJSONObject("fields");
                 // The issue does not have the required information, so it can be skipped
-                if (!jsonIssue.has(JiraIssue.KEY) || !fields.has(JiraIssue.RESOLUTION_DATE) || !fields.has(JiraIssue.CREATED)) {
+                if (!jsonIssue.has(JiraIssue.KEY_FIELD) || !fields.has(JiraIssue.RESOLUTION_DATE_FIELD) || !fields.has(JiraIssue.CREATED_FIELD)) {
                     totalDecrement += 1;
                     continue;
                 }
-                String key = jsonIssue.getString(JiraIssue.KEY); // e.s. BOOKKEEPER-1
-                String resolutionString = fields.getString(JiraIssue.RESOLUTION_DATE);
-                String createdString = fields.getString(JiraIssue.CREATED);
+                String key = jsonIssue.getString(JiraIssue.KEY_FIELD); // e.s. BOOKKEEPER-1
+                String resolutionString = fields.getString(JiraIssue.RESOLUTION_DATE_FIELD);
+                String createdString = fields.getString(JiraIssue.CREATED_FIELD);
                 // Parse the dates
                 LocalDate resolution = LocalDate.parse(resolutionString.substring(0, 10));
                 LocalDate created = LocalDate.parse(createdString.substring(0, 10));
                 // Get the highest fix version on Jira
                 // Case: issue was reopened multiple times (so there are more than one fix version) ~ resolutiondate is only for the first one | BOOKKEEPER - 695
-                List<LocalDate> fixVersions = getVersionsFromJsonArray(fields.getJSONArray(JiraIssue.FIX_VERSIONS));
+                List<LocalDate> fixVersions = getVersionsFromJsonArray(fields.getJSONArray(JiraIssue.FIX_VERSIONS_FIELD));
                 // Case: multiple fix versions (after resolution date) | BOOKKEEPER-695
                 Optional<LocalDate> fix = fixVersions.stream().max(Comparator.naturalOrder());
                 // Replace the current resolution date to the fix version on Jira (sometimes the issue is reopened, but the resolution date is not updated)
                 // Case: fix version on Jira has a release date after the created field | i.e. BOOKKEEPER-774
                 //       (BOOKKEEPER-774 is not present in the issue list because it's after the last version considered)
-                if (fix.isPresent() && fix.get().isAfter(created) && !fix.get().isAfter(lastVersion)) resolution = fix.get();
+                if (fix.isPresent() && fix.get().isAfter(created) && !fix.get().isAfter(lastVersion))
+                    resolution = fix.get();
 
                 // Get affected versions from Jira and sort them
-                List<LocalDate> affectedVersions = getVersionsFromJsonArray(fields.getJSONArray(JiraIssue.VERSIONS));
+                List<LocalDate> affectedVersions = getVersionsFromJsonArray(fields.getJSONArray(JiraIssue.VERSIONS_FIELD));
                 affectedVersions.sort(Comparator.naturalOrder());
 
                 JiraIssue issue = new JiraIssue(key, resolution, created, affectedVersions);
@@ -220,8 +221,8 @@ public class Jira {
         List<LocalDate> versions = new ArrayList<>();
         for (int i = 0; i < array.length(); i++) {
             JSONObject o = array.getJSONObject(i);
-            if (!o.has(JiraVersion.RELEASE_DATE)) continue;
-            String dateString = o.getString(JiraVersion.RELEASE_DATE);
+            if (!o.has(JiraVersion.RELEASE_DATE_FIELD)) continue;
+            String dateString = o.getString(JiraVersion.RELEASE_DATE_FIELD);
             LocalDate date = LocalDate.parse(dateString);
             versions.add(date);
         }
