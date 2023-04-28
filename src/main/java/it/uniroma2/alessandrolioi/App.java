@@ -1,10 +1,11 @@
 package it.uniroma2.alessandrolioi;
 
-import it.uniroma2.alessandrolioi.git.controller.GitRepo;
+import it.uniroma2.alessandrolioi.git.GitRepo;
 import it.uniroma2.alessandrolioi.git.exceptions.GitLogException;
 import it.uniroma2.alessandrolioi.git.exceptions.GitRepoException;
 import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
 import it.uniroma2.alessandrolioi.integration.JiraGitIntegration;
+import it.uniroma2.alessandrolioi.integration.exceptions.NotFoundException;
 import it.uniroma2.alessandrolioi.jira.Jira;
 import it.uniroma2.alessandrolioi.jira.exceptions.JiraRESTException;
 import it.uniroma2.alessandrolioi.jira.models.JiraIssue;
@@ -36,11 +37,12 @@ public class App {
             bookkeeper.applyProportionIncrement(bookkeeperVersions, avroColdStart);
 
             JiraGitIntegration integration = new JiraGitIntegration(bookkeeperVersions, commits);
-            for (Map.Entry<JiraVersion, GitCommitEntry> entry : integration.getRevisions().entrySet()) {
+            Map<JiraVersion, GitCommitEntry> revisions = integration.loadRevisions();
+            for (Map.Entry<JiraVersion, GitCommitEntry> entry : revisions.entrySet()) {
                 System.out.printf("%s - %s%n", entry.getKey().name(), entry.getValue().hash());
             }
-        } catch (JiraRESTException | GitRepoException | GitLogException e) {
-            throw new RuntimeException(e);
+        } catch (JiraRESTException | GitRepoException | GitLogException | NotFoundException e) {
+            e.printStackTrace();
         } finally {
             Objects.requireNonNull(repo).clean();
         }
