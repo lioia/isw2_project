@@ -1,4 +1,4 @@
-package it.uniroma2.alessandrolioi.git.controller;
+package it.uniroma2.alessandrolioi.git;
 
 import it.uniroma2.alessandrolioi.git.exceptions.GitLogException;
 import it.uniroma2.alessandrolioi.git.exceptions.GitRepoException;
@@ -15,9 +15,7 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

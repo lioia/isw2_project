@@ -10,10 +10,6 @@ public class GitRepoException extends Exception {
         super("[REPO] %s".formatted(reason));
     }
 
-    public GitRepoException(Throwable cause) {
-        super("[REPO]", cause);
-    }
-
     public GitRepoException(String reason, Throwable cause) {
         super("[REPO] %s".formatted(reason), cause);
     }
