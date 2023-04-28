@@ -14,4 +14,5 @@ public record JiraVersion(String id, String name, LocalDate releaseDate,
     public static final String ID_FIELD = "id";
     public static final String NAME_FIELD = "name";
     public static final String RELEASE_DATE_FIELD = "releaseDate";
+    public static final String RELEASED_FIELD = "released";
 }
