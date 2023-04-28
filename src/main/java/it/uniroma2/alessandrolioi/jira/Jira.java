@@ -27,13 +27,13 @@ public class Jira {
         String url = "https://issues.apache.org/jira/rest/api/2/project/%s/versions".formatted(project);
         String json = getJsonFromUrl(url);
         JSONArray jsonVersions = new JSONArray(json);
-        // Loading only 50% of releases (for better dataset accuracy ~ snoring problem)
-        for (int i = 0; i < Math.ceilDiv(jsonVersions.length(), 2); i++) {
+        for (int i = 0; i < jsonVersions.length(); i++) {
             JSONObject jsonVersion = jsonVersions.getJSONObject(i);
+            boolean released = jsonVersion.getBoolean(JiraVersion.RELEASED_FIELD);
+            // Skipping versions that do not have a release date (only required field) or are set as not released
+            if (!jsonVersion.has(JiraVersion.RELEASE_DATE_FIELD) || !released) continue;
             String id = jsonVersion.getString(JiraVersion.ID_FIELD);
             String name = jsonVersion.getString(JiraVersion.NAME_FIELD);
-            // Skipping versions that do not have a release date (only required field)
-            if (!jsonVersion.has(JiraVersion.RELEASE_DATE_FIELD)) continue;
             String releaseDateString = jsonVersion.getString(JiraVersion.RELEASE_DATE_FIELD);
             LocalDate date = LocalDate.parse(releaseDateString);
             JiraVersion version = new JiraVersion(id, name, date);
@@ -42,7 +42,8 @@ public class Jira {
 
         versions.sort(Comparator.comparing(JiraVersion::releaseDate));
 
-        return versions;
+        // Loading only 50% of releases (for better dataset accuracy ~ snoring problem)
+        return versions.subList(0, Math.ceilDiv(versions.size(), 2));
     }
 
     public List<JiraIssue> loadIssues(LocalDate firstVersion, LocalDate lastVersion) throws JiraRESTException {
@@ -117,8 +118,6 @@ public class Jira {
             // Find IV, OV and FV from Jira API (based on `created`, `resolution` and the first affectedVersion
             List<Pair<JiraVersion, Integer>> foundVersions = getVersions(issue, versions);
             Pair<JiraVersion, Integer> injected = foundVersions.get(0);
-            JiraVersion injectedVersion = null;
-            if (injected != null) injectedVersion = injected.first();
             Pair<JiraVersion, Integer> opening = foundVersions.get(1);
             Pair<JiraVersion, Integer> fix = foundVersions.get(2);
 
@@ -127,17 +126,16 @@ public class Jira {
             if (!issue.getAffectedVersionsDates().isEmpty() && issue.getAffectedVersionsDates().get(0).isAfter(fix.first().releaseDate())) {
                 issue.getAffectedVersionsDates().clear();
                 injected = null;
-                injectedVersion = null;
             }
 
             // No injected version was found but the opening version is the first release
             // So the injected must be the first release as well
-            if (injected == null && opening.first() == versions.get(0)) injectedVersion = opening.first();
+            if (injected == null && opening.first() == versions.get(0)) injected = opening;
 
             // Injected version is present (from affectedVersion, or derived as the first release)
             if (injected != null) {
                 issue.setIvIndex(injected.second());
-                injectedVersion.injected().add(issue);
+                injected.first().injected().add(issue);
             }
             issue.setOvIndex(opening.second());
             issue.setFvIndex(fix.second());
@@ -179,7 +177,7 @@ public class Jira {
                 lastSum += currentSum;
             }
             // Get issue opened in this release without IV
-            List<JiraIssue> invalid = new ArrayList<>(version.opened());
+            List<JiraIssue> invalid = new ArrayList<>(version.fixed());
             invalid.removeAll(valid);
             for (JiraIssue invalidIssue : invalid) {
                 // Calculate IV = FV - (FV - OV) * P
