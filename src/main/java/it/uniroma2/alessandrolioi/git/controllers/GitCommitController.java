@@ -20,12 +20,15 @@ public class GitCommitController {
     public List<String> getClassList(GitCommitEntry commit) throws GitLogException {
         try (TreeWalk walk = new TreeWalk(repository)) {
             List<String> classes = new ArrayList<>();
+            // Set base commit
             walk.addTree(commit.tree());
+            // Explore sub-folders
             walk.setRecursive(true);
+            // Exclude non-java files
             walk.setFilter(PathSuffixFilter.create(".java"));
-            while (walk.next()) {
-                classes.add(walk.getPathString());
-            }
+
+            // Iterate until there are files
+            while (walk.next()) classes.add(walk.getPathString());
 
             return classes;
         } catch (IOException e) {
