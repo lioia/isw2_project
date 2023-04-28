@@ -1,6 +1,7 @@
 package it.uniroma2.alessandrolioi;
 
-import it.uniroma2.alessandrolioi.git.GitRepo;
+import it.uniroma2.alessandrolioi.git.controllers.GitCommitController;
+import it.uniroma2.alessandrolioi.git.controllers.GitRepoController;
 import it.uniroma2.alessandrolioi.git.exceptions.GitLogException;
 import it.uniroma2.alessandrolioi.git.exceptions.GitRepoException;
 import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
@@ -19,7 +20,8 @@ public class App {
     public static void main(String[] args) {
         String project = "bookkeeper";
         String coldStartProject = "avro";
-        GitRepo repo = null;
+        GitRepoController repoController = null;
+        GitCommitController commitController;
         Jira bookkeeper = new Jira(project);
         try {
             List<JiraVersion> bookkeeperVersions = bookkeeper.loadVersions();
@@ -28,8 +30,9 @@ public class App {
             JiraVersion lastVersion = bookkeeperVersions.get(bookkeeperVersions.size() - 1);
 
             // Could be slow since it has to download ~90 MiB for BookKeeper and ~30 MiB for Avro
-            repo = new GitRepo(project, "https://github.com/apache/%s".formatted(project), "master");
-            List<GitCommitEntry> commits = repo.getCommits();
+            repoController = new GitRepoController(project, "https://github.com/apache/%s".formatted(project), "master");
+            commitController = new GitCommitController(repoController.getRepository());
+            List<GitCommitEntry> commits = repoController.getCommits();
 
             List<JiraIssue> bookkeeperIssues = bookkeeper.loadIssues(firstVersion.releaseDate(), lastVersion.releaseDate());
             bookkeeper.classifyIssues(bookkeeperVersions, bookkeeperIssues);
@@ -38,13 +41,14 @@ public class App {
 
             JiraGitIntegration integration = new JiraGitIntegration(bookkeeperVersions, commits);
             Map<JiraVersion, GitCommitEntry> revisions = integration.loadRevisions();
-            for (Map.Entry<JiraVersion, GitCommitEntry> entry : revisions.entrySet()) {
-                System.out.printf("%s - %s%n", entry.getKey().name(), entry.getValue().hash());
+            for (JiraVersion version : bookkeeperVersions) {
+                List<String> classes = commitController.getClassList(revisions.get(version));
+                classes.forEach(c -> System.out.printf("%s,%s%n", version.name(), c));
             }
         } catch (JiraRESTException | GitRepoException | GitLogException | NotFoundException e) {
             e.printStackTrace();
         } finally {
-            Objects.requireNonNull(repo).clean();
+            Objects.requireNonNull(repoController).clean();
         }
     }
 

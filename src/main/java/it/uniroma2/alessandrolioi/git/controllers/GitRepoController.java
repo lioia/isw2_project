@@ -1,4 +1,4 @@
-package it.uniroma2.alessandrolioi.git;
+package it.uniroma2.alessandrolioi.git.controllers;
 
 import it.uniroma2.alessandrolioi.git.exceptions.GitLogException;
 import it.uniroma2.alessandrolioi.git.exceptions.GitRepoException;
@@ -11,6 +11,7 @@ import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.RepositoryBuilder;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevTree;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,22 +21,22 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class GitRepo {
+public class GitRepoController {
     private final String folderPath;
     private Repository repository;
 
-    public GitRepo(String folderPath) throws GitRepoException {
+    public GitRepoController(String folderPath) throws GitRepoException {
         load(folderPath);
         this.folderPath = folderPath;
     }
 
-    public GitRepo(String folderPath, String url, String branch) throws GitRepoException {
+    public GitRepoController(String folderPath, String url, String branch) throws GitRepoException {
         download(folderPath, url, branch);
         load(folderPath);
         this.folderPath = folderPath;
     }
 
-    public GitRepo(String folderPath, String url) throws GitRepoException {
+    public GitRepoController(String folderPath, String url) throws GitRepoException {
         this(folderPath, url, "main");
     }
 
@@ -50,7 +51,8 @@ public class GitRepo {
                     String authorName = commit.getAuthorIdent().getName();
                     String authorEmail = commit.getAuthorIdent().getEmailAddress();
                     LocalDateTime date = LocalDateTime.ofInstant(commit.getCommitterIdent().getWhenAsInstant(), commit.getCommitterIdent().getZoneId());
-                    GitCommitEntry entry = new GitCommitEntry(hash, message, authorName, authorEmail, date);
+                    RevTree tree = commit.getTree();
+                    GitCommitEntry entry = new GitCommitEntry(hash, message, authorName, authorEmail, date, tree);
                     entries.add(entry);
                 }
             }
@@ -64,6 +66,22 @@ public class GitRepo {
 
         Collections.reverse(entries); // Ascending order of commit date
         return entries;
+    }
+
+    public boolean clean() {
+        repository.close();
+        return recurseClean(new File(folderPath));
+    }
+
+    private boolean recurseClean(File folder) {
+        File[] files = folder.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                // Early return (some files could not be deleted)
+                if (!recurseClean(file)) return false;
+            }
+        }
+        return folder.delete();
     }
 
     private void load(String folderPath) throws GitRepoException {
@@ -93,19 +111,7 @@ public class GitRepo {
         }
     }
 
-    public boolean clean() {
-        repository.close();
-        return recurseClean(new File(folderPath));
-    }
-
-    private boolean recurseClean(File folder) {
-        File[] files = folder.listFiles();
-        if (files != null) {
-            for (File file : files) {
-                // Early return (some files could not be deleted)
-                if (!recurseClean(file)) return false;
-            }
-        }
-        return folder.delete();
+    public Repository getRepository() {
+        return repository;
     }
 }
