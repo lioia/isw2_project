@@ -92,17 +92,14 @@ public class GitCommitController {
                 int added = 0;
                 int deleted = 0;
                 for (Edit edit : header.toEditList()) {
-                    switch (edit.getType()) {
-                        case INSERT -> added += edit.getLengthB() - edit.getLengthA();
-                        case DELETE -> deleted += edit.getLengthA() - edit.getLengthB();
-                        case REPLACE -> {
-                            int replace = edit.getLengthB() - edit.getLengthA();
-                            if (replace > 0) added += replace;
-                            else if (replace < 0) deleted += replace;
-                        }
-                        // Nothing to describe
-                        case EMPTY -> {
-                        }
+                    int lengthDifference = edit.getLengthB() - edit.getLengthA();
+                    if (edit.getType() == Edit.Type.INSERT)
+                        added += lengthDifference;
+                    else if (edit.getType() == Edit.Type.DELETE)
+                        deleted -= lengthDifference;
+                    else if (edit.getType() == Edit.Type.REPLACE) {
+                        if (lengthDifference > 0) added += lengthDifference;
+                        else if (lengthDifference < 0) deleted += lengthDifference;
                     }
                 }
                 String path = diff.getNewPath();
