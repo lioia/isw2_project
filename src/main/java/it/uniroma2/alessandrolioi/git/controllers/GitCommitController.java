@@ -4,11 +4,13 @@ import it.uniroma2.alessandrolioi.git.exceptions.GitDiffException;
 import it.uniroma2.alessandrolioi.git.exceptions.GitLogException;
 import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
 import it.uniroma2.alessandrolioi.git.models.GitDiffEntry;
+import it.uniroma2.alessandrolioi.utils.Pair;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.Edit;
+import org.eclipse.jgit.diff.EditList;
 import org.eclipse.jgit.errors.AmbiguousObjectException;
 import org.eclipse.jgit.errors.CorruptObjectException;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
@@ -88,22 +90,9 @@ public class GitCommitController {
             Map<String, GitDiffEntry> differences = new HashMap<>();
             for (DiffEntry diff : diffs) {
                 FileHeader header = diffFormatter.toFileHeader(diff);
-                // Calculate added and deleted lines based on the edit list
-                int added = 0;
-                int deleted = 0;
-                for (Edit edit : header.toEditList()) {
-                    int lengthDifference = edit.getLengthB() - edit.getLengthA();
-                    if (edit.getType() == Edit.Type.INSERT)
-                        added += lengthDifference;
-                    else if (edit.getType() == Edit.Type.DELETE)
-                        deleted -= lengthDifference;
-                    else if (edit.getType() == Edit.Type.REPLACE) {
-                        if (lengthDifference > 0) added += lengthDifference;
-                        else if (lengthDifference < 0) deleted += lengthDifference;
-                    }
-                }
+                Pair<Integer, Integer> addedAndDeleted = calculateAddedAndDeleted(header.toEditList());
                 String path = diff.getNewPath();
-                GitDiffEntry entry = new GitDiffEntry(diff, added, deleted);
+                GitDiffEntry entry = new GitDiffEntry(diff, addedAndDeleted.first(), addedAndDeleted.second());
                 differences.put(path, entry);
             }
             return differences;
@@ -114,5 +103,23 @@ public class GitCommitController {
         } catch (IOException e) {
             throw new GitDiffException("Could not load commits", e);
         }
+    }
+
+    // Calculate added and deleted lines based on the edit list
+    private Pair<Integer, Integer> calculateAddedAndDeleted(EditList list) {
+        int added = 0;
+        int deleted = 0;
+        for (Edit edit : list) {
+            int lengthDifference = edit.getLengthB() - edit.getLengthA();
+            if (edit.getType() == Edit.Type.INSERT)
+                added += lengthDifference;
+            else if (edit.getType() == Edit.Type.DELETE)
+                deleted -= lengthDifference;
+            else if (edit.getType() == Edit.Type.REPLACE) {
+                if (lengthDifference > 0) added += lengthDifference;
+                else if (lengthDifference < 0) deleted += lengthDifference;
+            }
+        }
+        return new Pair<>(added, deleted);
     }
 }
