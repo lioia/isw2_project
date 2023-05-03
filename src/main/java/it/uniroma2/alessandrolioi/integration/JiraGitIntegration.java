@@ -2,41 +2,36 @@ package it.uniroma2.alessandrolioi.integration;
 
 import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
 import it.uniroma2.alessandrolioi.integration.exceptions.NotFoundException;
+import it.uniroma2.alessandrolioi.jira.models.JiraIssue;
 import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.*;
-import java.util.regex.Pattern;
 
 public class JiraGitIntegration {
-    public Map<JiraVersion, GitCommitEntry> findRevisions(List<JiraVersion> versions, List<GitCommitEntry> commits) throws NotFoundException {
+    public Map<JiraVersion, GitCommitEntry> findRevisionsOfVersions(List<JiraVersion> versions, List<GitCommitEntry> commits) throws NotFoundException {
+        FilterController filter = new FilterController();
         Map<JiraVersion, GitCommitEntry> revisions = new HashMap<>();
         for (JiraVersion version : versions) {
-            Optional<GitCommitEntry> candidate = useSemanticFilter(version.name(), commits);
-            if (candidate.isEmpty()) candidate = useDateFilter(version.releaseDate(), commits);
-            if (candidate.isEmpty()) throw new NotFoundException(version.name());
-            revisions.put(version, candidate.get());
+            GitCommitEntry candidate = null;
+            try {
+                candidate = filter.useSemanticFilter(version.name(), commits);
+            } catch (NotFoundException e) {
+                candidate = filter.useDateFilter(version.releaseDate(), commits);
+            } finally {
+                revisions.put(version, candidate);
+            }
         }
         return revisions;
     }
 
-    // Getting commits containing the version name in the commit message
-    // (most commit releases follow the pattern `BookKeeper VERSION_NAME release` or `Tag* VERSION_NAME[ release]`)
-    private Optional<GitCommitEntry> useSemanticFilter(String name, List<GitCommitEntry> commits) {
-        Pattern avroPattern = Pattern.compile("Tag.* %s(| release)".formatted(name));
-        List<GitCommitEntry> semanticFilter = commits.stream()
-                .filter(c -> avroPattern.matcher(c.message()).find()
-                        || c.message().contains("BookKeeper %s release".formatted(name)))
-                .toList();
-        if (semanticFilter.isEmpty()) return Optional.empty();
-        return Optional.of(semanticFilter.get(semanticFilter.size() - 1));
-    }
-
-    // Returns the first commit after the version release date (end of day)
-    private Optional<GitCommitEntry> useDateFilter(LocalDate releaseDate, List<GitCommitEntry> commits) {
-        return commits.stream()
-                .filter(c -> !c.commitDate().isBefore(releaseDate.atTime(LocalTime.MAX)))
-                .findFirst();
+    public GitCommitEntry findRevisionOfIssue(JiraIssue issue, List<GitCommitEntry> commits) throws NotFoundException {
+        FilterController filter = new FilterController();
+        GitCommitEntry candidate;
+        try {
+            candidate = filter.useSemanticKeyFilter(issue.getKey(), commits);
+        } catch (NotFoundException e) {
+            candidate = filter.useDateFilter(issue.getResolution(), commits);
+        }
+        return candidate;
     }
 }

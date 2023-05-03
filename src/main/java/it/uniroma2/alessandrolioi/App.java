@@ -30,7 +30,7 @@ public class App {
 //            git = new Git(project);
 
             JiraGitIntegration integration = new JiraGitIntegration();
-            Map<JiraVersion, GitCommitEntry> revisions = integration.findRevisions(bookkeeper.getVersions(), git.getCommits());
+            Map<JiraVersion, GitCommitEntry> revisions = integration.findRevisionsOfVersions(bookkeeper.getVersions(), git.getCommits());
             for (JiraVersion version : bookkeeper.getVersions()) {
                 List<String> classes = git.getClassList(revisions.get(version));
                 Map<String, GitDiffEntry> diffs = git.getDifferences(
