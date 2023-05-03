@@ -29,8 +29,8 @@ public class App {
             git = new Git(project, "https://github.com/apache/bookkeeper", "master");
 //            git = new Git(project);
 
-            JiraGitIntegration integration = new JiraGitIntegration();
-            Map<JiraVersion, GitCommitEntry> revisions = integration.findRevisions(bookkeeper.getVersions(), git.getCommits());
+            JiraGitIntegration integration = new JiraGitIntegration(git.getCommits());
+            Map<JiraVersion, GitCommitEntry> revisions = integration.findRevisionsOfVersions(bookkeeper.getVersions());
             for (JiraVersion version : bookkeeper.getVersions()) {
                 List<String> classes = git.getClassList(revisions.get(version));
                 Map<String, GitDiffEntry> diffs = git.getDifferences(
