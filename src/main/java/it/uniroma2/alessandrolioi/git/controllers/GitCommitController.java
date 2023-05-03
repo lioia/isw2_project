@@ -72,6 +72,9 @@ public class GitCommitController {
                             if (replace > 0) added += replace;
                             else if (replace < 0) deleted += replace;
                         }
+                        // Nothing to describe
+                        case EMPTY -> {
+                        }
                     }
                 }
                 String path = diff.getNewPath();
