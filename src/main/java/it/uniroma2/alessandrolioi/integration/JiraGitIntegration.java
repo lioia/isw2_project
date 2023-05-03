@@ -1,6 +1,7 @@
 package it.uniroma2.alessandrolioi.integration;
 
 import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
+import it.uniroma2.alessandrolioi.integration.controllers.FilterController;
 import it.uniroma2.alessandrolioi.integration.exceptions.NotFoundException;
 import it.uniroma2.alessandrolioi.jira.models.JiraIssue;
 import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
@@ -8,7 +9,13 @@ import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 import java.util.*;
 
 public class JiraGitIntegration {
-    public Map<JiraVersion, GitCommitEntry> findRevisionsOfVersions(List<JiraVersion> versions, List<GitCommitEntry> commits) throws NotFoundException {
+    private final List<GitCommitEntry> commits;
+
+    public JiraGitIntegration(List<GitCommitEntry> commits) {
+        this.commits = commits;
+    }
+
+    public Map<JiraVersion, GitCommitEntry> findRevisionsOfVersions(List<JiraVersion> versions) throws NotFoundException {
         FilterController filter = new FilterController();
         Map<JiraVersion, GitCommitEntry> revisions = new HashMap<>();
         for (JiraVersion version : versions) {
@@ -24,7 +31,7 @@ public class JiraGitIntegration {
         return revisions;
     }
 
-    public GitCommitEntry findRevisionOfIssue(JiraIssue issue, List<GitCommitEntry> commits) throws NotFoundException {
+    public GitCommitEntry findRevisionOfIssue(JiraIssue issue) throws NotFoundException {
         FilterController filter = new FilterController();
         GitCommitEntry candidate;
         try {

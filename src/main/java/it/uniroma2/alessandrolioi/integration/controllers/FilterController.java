@@ -1,4 +1,4 @@
-package it.uniroma2.alessandrolioi.integration;
+package it.uniroma2.alessandrolioi.integration.controllers;
 
 import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
 import it.uniroma2.alessandrolioi.integration.exceptions.NotFoundException;
