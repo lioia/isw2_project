@@ -1,5 +1,8 @@
 package it.uniroma2.alessandrolioi;
 
+import it.uniroma2.alessandrolioi.dataset.DatasetBuilder;
+import it.uniroma2.alessandrolioi.dataset.exceptions.DatasetWriterException;
+import it.uniroma2.alessandrolioi.dataset.exceptions.MetricException;
 import it.uniroma2.alessandrolioi.git.Git;
 import it.uniroma2.alessandrolioi.git.exceptions.GitDiffException;
 import it.uniroma2.alessandrolioi.git.exceptions.GitLogException;
@@ -31,19 +34,10 @@ public class App {
 
             JiraGitIntegration integration = new JiraGitIntegration(git.getCommits());
             Map<JiraVersion, GitCommitEntry> revisions = integration.findRevisionsOfVersions(bookkeeper.getVersions());
-            for (JiraVersion version : bookkeeper.getVersions()) {
-                List<String> classes = git.getClassList(revisions.get(version));
-                Map<String, GitDiffEntry> diffs = git.getDifferences(
-                        revisions.get(bookkeeper.getVersions().get(0)), // First release
-                        revisions.get(bookkeeper.getVersions().get(1)) // Second release
-                );
-                for (String aClass : classes) {
-                    GitDiffEntry diff = diffs.get(aClass);
-                    if (diff == null) System.out.printf("No diff found for class %s%n%n", aClass);
-                    else System.out.printf("%s: %d %d%n%n", aClass, diff.added(), diff.deleted());
-                }
-            }
-        } catch (JiraRestException | GitRepoException | GitLogException | NotFoundException | GitDiffException e) {
+            DatasetBuilder dataset = new DatasetBuilder(revisions, git);
+            dataset.applyLOCMetric();
+            dataset.writeToFile("output.csv");
+        } catch (Exception e) {
             e.printStackTrace();
         } finally {
             if (git != null) git.close();
