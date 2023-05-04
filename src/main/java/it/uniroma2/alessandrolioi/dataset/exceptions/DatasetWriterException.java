@@ -9,8 +9,4 @@ public class DatasetWriterException extends Exception {
     public DatasetWriterException(String reason, Throwable cause) {
         super("[WRITE] %s".formatted(reason), cause);
     }
-
-    public DatasetWriterException(Throwable cause) {
-        super(cause);
-    }
 }

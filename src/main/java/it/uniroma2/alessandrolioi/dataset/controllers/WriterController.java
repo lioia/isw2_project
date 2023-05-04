@@ -11,17 +11,20 @@ import java.util.List;
 import java.util.Map;
 
 public class WriterController {
-    public void writeToFile(String output, List<JiraVersion> versions, List<String> metrics, Map<JiraVersion, List<DatasetEntry>> entries) throws DatasetWriterException {
+    public void writeToFile(String output, List<JiraVersion> versions, List<String> metrics, Map<JiraVersion, List<String>> keys, Map<String, DatasetEntry> values) throws DatasetWriterException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(output))) {
             writeHeader(writer, metrics);
             // For every release (sorted)
             for (int i = 0; i < versions.size(); i++) {
                 JiraVersion version = versions.get(i);
-                // Write number of release
-                writer.write(i);
+                List<String> classList = keys.get(version);
                 // For every class in the release
-                for (DatasetEntry entry : entries.get(version)) {
-                    writeEntry(writer, metrics, entry);
+                for (String aClass : classList) {
+                    DatasetEntry entry = values.get(aClass);
+                    // Write number of release and class name
+                    writer.write("%d,%s".formatted(i + 1, aClass));
+                    // Write Metrics and Buggy
+                    writeMetrics(writer, metrics, entry);
                 }
             }
         } catch (IOException e) {
@@ -39,20 +42,18 @@ public class WriterController {
         }
     }
 
-    private void writeEntry(BufferedWriter writer, List<String> metrics, DatasetEntry entry) throws DatasetWriterException {
+    private void writeMetrics(BufferedWriter writer, List<String> metrics, DatasetEntry entry) throws DatasetWriterException {
         try {
-            // Write class name
-            writer.write(",%s".formatted(entry.name()));
             // For every metric
             for (String metric : metrics) {
-                String value = entry.fields().get(metric);
+                String value = entry.metrics().get(metric);
                 // Write metric
                 writer.write(",%s".formatted(value));
             }
             // Write buggy field
             writer.write(",%s\n".formatted(entry.buggy()));
         } catch (IOException e) {
-            throw new DatasetWriterException("Could not write entry for %s to file".formatted(entry.name()), e);
+            throw new DatasetWriterException("Could not write entry to file", e);
         }
     }
 }
