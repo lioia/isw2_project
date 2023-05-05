@@ -32,6 +32,7 @@ public class App {
             DatasetBuilder dataset = new DatasetBuilder(revisions, git);
             dataset.applyLOCMetric();
             dataset.applyLOCTouchedMetric();
+            dataset.applyChurnMetric();
             dataset.writeToFile("output.csv");
         } catch (Exception e) {
             logger.log(Level.SEVERE, e.getMessage());
