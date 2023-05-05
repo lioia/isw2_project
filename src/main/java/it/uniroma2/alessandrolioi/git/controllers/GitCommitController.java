@@ -1,6 +1,7 @@
 package it.uniroma2.alessandrolioi.git.controllers;
 
 import it.uniroma2.alessandrolioi.git.exceptions.GitDiffException;
+import it.uniroma2.alessandrolioi.git.exceptions.GitFileException;
 import it.uniroma2.alessandrolioi.git.exceptions.GitLogException;
 import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
 import it.uniroma2.alessandrolioi.git.models.GitDiffEntry;
@@ -15,8 +16,7 @@ import org.eclipse.jgit.errors.AmbiguousObjectException;
 import org.eclipse.jgit.errors.CorruptObjectException;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
-import org.eclipse.jgit.lib.Ref;
-import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.patch.FileHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
@@ -25,6 +25,7 @@ import org.eclipse.jgit.treewalk.filter.PathSuffixFilter;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -74,6 +75,23 @@ public class GitCommitController {
             return classes;
         } catch (IOException e) {
             throw new GitLogException("IO failure. Could not access refs", e);
+        }
+    }
+
+    public String getContentsOfFile(Repository repository, GitCommitEntry commit, String fileName) throws GitFileException {
+        try (TreeWalk walk = TreeWalk.forPath(repository, fileName, commit.tree())) {
+            ObjectId blobId = walk.getObjectId(0);
+            ObjectReader reader = repository.newObjectReader();
+            ObjectLoader loader = reader.open(blobId);
+            return new String(loader.getBytes(), StandardCharsets.UTF_8);
+        } catch (CorruptObjectException e) {
+            throw new GitFileException("Corrupt git object", e);
+        } catch (IncorrectObjectTypeException e) {
+            throw new GitFileException("Unexpected git object type", e);
+        } catch (MissingObjectException e) {
+            throw new GitFileException("Git object not found", e);
+        } catch (IOException e) {
+            throw new GitFileException("Reading failed", e);
         }
     }
 
