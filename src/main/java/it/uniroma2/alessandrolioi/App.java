@@ -25,7 +25,6 @@ public class App {
             bookkeeper.applyProportion(coldStart);
 
             git = new Git(project, "https://github.com/apache/bookkeeper", "master");
-//            git = new Git(project);
 
             JiraGitIntegration integration = new JiraGitIntegration(git.getCommits());
             Map<JiraVersion, GitCommitEntry> revisions = integration.findRevisionsOfVersions(bookkeeper.getVersions());
