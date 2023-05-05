@@ -104,6 +104,45 @@ public class DatasetBuilder {
         }
     }
 
+    public void applyChurnMetric() throws MetricException {
+        String metric = "Churn";
+        try {
+            JiraVersion previousVersion = sortedVersions.get(0);
+            // First version cannot calculate this metric,
+            // because it does not have a previous revision that it can compare it to
+            for (String aClass : entryKeys.get(0))
+                entryValues.get(aClass).get(0).metrics().put(metric, "0");
+
+            // For every consecutive pair of classes
+            for (int i = 1; i < sortedVersions.size(); i++) {
+                JiraVersion currentVersion = sortedVersions.get(i);
+                // Get the revisions of the previous and current release
+                GitCommitEntry first = revisions.get(previousVersion);
+                GitCommitEntry second = revisions.get(currentVersion);
+
+                // Get the differences between commits
+                Map<String, GitDiffEntry> diffs = git.getDifferences(first, second);
+
+                // For every class in the current release
+                for (String aClass : entryKeys.get(i)) {
+                    GitDiffEntry diff = diffs.get(aClass);
+                    // Calculate the LOC touched, if there are differences
+                    int churn = 0;
+                    if (diff != null)
+                        churn = diff.added() - diff.deleted();
+                    entryValues.get(aClass).get(i).metrics().put(metric, Integer.toString(churn));
+                }
+
+                // Set previous version as the current for the next iteration
+                previousVersion = currentVersion;
+            }
+
+            metrics.add(metric);
+        } catch (GitDiffException e) {
+            throw new MetricException(metric, "Could not load differences between commits", e);
+        }
+    }
+
     public void writeToFile(String output) throws DatasetWriterException {
         WriterController controller = new WriterController();
         controller.writeToFile(output, sortedVersions, metrics, entryKeys, entryValues);
