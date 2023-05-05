@@ -11,16 +11,15 @@ import java.util.List;
 import java.util.Map;
 
 public class WriterController {
-    public void writeToFile(String output, List<JiraVersion> versions, List<String> metrics, Map<JiraVersion, List<String>> keys, Map<String, DatasetEntry> values) throws DatasetWriterException {
+    public void writeToFile(String output, List<JiraVersion> versions, List<String> metrics, Map<Integer, List<String>> keys, Map<String, List<DatasetEntry>> values) throws DatasetWriterException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(output))) {
             writeHeader(writer, metrics);
             // For every release (sorted)
             for (int i = 0; i < versions.size(); i++) {
-                JiraVersion version = versions.get(i);
-                List<String> classList = keys.get(version);
+                List<String> classList = keys.get(i);
                 // For every class in the release
                 for (String aClass : classList) {
-                    DatasetEntry entry = values.get(aClass);
+                    DatasetEntry entry = values.get(aClass).get(i);
                     // Write number of release and class name
                     writer.write("%d,%s".formatted(i + 1, aClass));
                     // Write Metrics and Buggy
