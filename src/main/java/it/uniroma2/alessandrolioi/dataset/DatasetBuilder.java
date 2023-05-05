@@ -46,22 +46,9 @@ public class DatasetBuilder {
      * */
     public void applyLOCMetric() throws MetricException {
         String metric = "LOC";
-        try {
-            for (int i = 0; i < sortedVersions.size(); i++) {
-                JiraVersion version = sortedVersions.get(i);
-                GitCommitEntry revision = revisions.get(version);
-
-                List<String> classList = entryKeys.get(i);
-                for (String aClass : classList) {
-                    String contents = git.getContentsOfClass(revision, aClass);
-                    int loc = contents.split("\n").length;
-                    entryValues.get(aClass).get(i).metrics().put(metric, Integer.toString(loc));
-                }
-            }
-            metrics.add(metric);
-        } catch (GitFileException e) {
-            throw new MetricException(metric, "Could not get file contents", e);
-        }
+        MetricController controller = new MetricController();
+        controller.applyLOCMetric(metric, git, sortedVersions, revisions, entryKeys, entryValues);
+        metrics.add(metric);
     }
 
     public void applyLOCTouchedMetric() throws MetricException {

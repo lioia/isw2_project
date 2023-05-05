@@ -4,6 +4,7 @@ import it.uniroma2.alessandrolioi.dataset.exceptions.MetricException;
 import it.uniroma2.alessandrolioi.dataset.models.DatasetEntry;
 import it.uniroma2.alessandrolioi.git.Git;
 import it.uniroma2.alessandrolioi.git.exceptions.GitDiffException;
+import it.uniroma2.alessandrolioi.git.exceptions.GitFileException;
 import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
 import it.uniroma2.alessandrolioi.git.models.GitDiffEntry;
 import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
@@ -13,6 +14,26 @@ import java.util.Map;
 import java.util.function.Function;
 
 public class MetricController {
+    public void applyLOCMetric(String metric, Git git, List<JiraVersion> versions,
+                               Map<JiraVersion, GitCommitEntry> revisions, Map<Integer, List<String>> entryKeys,
+                               Map<String, List<DatasetEntry>> entryValues) throws MetricException {
+        try {
+            for (int i = 0; i < versions.size(); i++) {
+                JiraVersion version = versions.get(i);
+                GitCommitEntry revision = revisions.get(version);
+
+                List<String> classList = entryKeys.get(i);
+                for (String aClass : classList) {
+                    String contents = git.getContentsOfClass(revision, aClass);
+                    int loc = contents.split("\n").length;
+                    entryValues.get(aClass).get(i).metrics().put(metric, Integer.toString(loc));
+                }
+            }
+        } catch (GitFileException e) {
+            throw new MetricException(metric, "Could not get file contents", e);
+        }
+    }
+
     public void applyDifferenceMetric(String metric, Git git, List<JiraVersion> versions,
                                       Map<JiraVersion, GitCommitEntry> revisions, Map<Integer, List<String>> entryKeys,
                                       Map<String, List<DatasetEntry>> entryValues, Function<GitDiffEntry, String> func) throws MetricException {
