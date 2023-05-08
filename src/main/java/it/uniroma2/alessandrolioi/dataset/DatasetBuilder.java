@@ -16,14 +16,18 @@ import java.util.*;
 import java.util.stream.Stream;
 
 public class DatasetBuilder {
-    // Sorted list of revisions corresponding to a Jira release
+    // Sorted list of Jira releases
     private final List<JiraVersion> versions;
+    // Sorted list of revisions corresponding to a Jira release
     private final List<GitCommitEntry> revisions;
+
+    // Integration classes used to calculate the metrics
     private final JiraGitIntegration integration;
     private final Git git;
 
     // Maps class name to its metrics. i-th element in the list is the entry for the i-th version
     private final Map<String, List<DatasetEntry>> entries;
+    // Metrics used in dataset
     private final List<String> metrics;
 
     public DatasetBuilder(JiraGitIntegration integration, Git git) {
@@ -33,6 +37,7 @@ public class DatasetBuilder {
         this.entries = new HashMap<>();
         this.integration = integration;
 
+        // Sort versions by release date
         this.versions = new ArrayList<>(integration.revisions().keySet().stream().toList());
         this.versions.sort(Comparator.comparing(JiraVersion::releaseDate)); // Sort versions for release date
 
@@ -97,7 +102,8 @@ public class DatasetBuilder {
             }
         }
         MetricController controller = new MetricController();
-        controller.applyListMetric(git, revisions, entries, info -> {
+        controller.applyListMetric(git, revisions, info -> {
+            // Age calculated as ((lastCommitTime - firstCommitTime) / (currentReleaseTime - lastReleaseTime))
             double age = 0.0;
             if (!info.commits().isEmpty()) {
                 info.commits().sort(Comparator.comparing(GitCommitEntry::commitDate));
@@ -120,12 +126,16 @@ public class DatasetBuilder {
             for (DatasetEntry entry : entries.get(aClass))
                 entry.metrics().put("NFix", "0");
         MetricController controller = new MetricController();
-        controller.applyListMetric(git, revisions, entries, info -> {
+        controller.applyListMetric(git, revisions, info -> {
+            // Get the current version
             JiraVersion version = versions.get(info.versionIndex());
+            // Get the hashes of the commits between two releases
             List<String> commits = info.commits().stream().map(GitCommitEntry::hash).toList();
+            // Get the hashes of the commits relating to the fixed issues of this version
             Stream<String> fixed = version.fixed().stream().map(i -> integration.issues().get(i).hash());
+            // Get the intersection of this two list
             List<String> common = fixed.filter(commits::contains).toList();
-            System.out.println(common.size());
+            // Save the size of the list
             entries.get(info.aClass()).get(info.versionIndex()).metrics().put("NFix", String.valueOf(common.size()));
             return null;
         });
