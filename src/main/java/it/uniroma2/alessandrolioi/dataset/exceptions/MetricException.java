@@ -6,7 +6,7 @@ public class MetricException extends Exception {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    public MetricException(String metric, String reason, Throwable cause) {
-        super("[METRIC] %s failed: %s".formatted(metric, reason), cause);
+    public MetricException(String reason, Throwable cause) {
+        super("[METRIC] %s".formatted(reason), cause);
     }
 }

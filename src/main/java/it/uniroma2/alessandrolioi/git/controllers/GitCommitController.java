@@ -37,14 +37,8 @@ public class GitCommitController {
         try (Git git = new Git(repository)) {
             for (Ref branch : git.branchList().call()) {
                 // all: used to get the commits from all branches (even the branches not synced with GitHub, but only in SVN ~ pre-2017)
-                for (RevCommit commit : git.log().all().add(repository.resolve(branch.getName())).call()) {
-                    String hash = commit.getName();
-                    String message = commit.getShortMessage();
-                    LocalDateTime date = LocalDateTime.ofInstant(commit.getCommitterIdent().getWhenAsInstant(), commit.getCommitterIdent().getZoneId());
-                    RevTree tree = commit.getTree();
-                    GitCommitEntry entry = new GitCommitEntry(hash, message, date, tree);
-                    entries.add(entry);
-                }
+                for (RevCommit commit : git.log().all().add(repository.resolve(branch.getName())).call())
+                    entries.add(commitFromRevCommit(commit));
             }
         } catch (GitAPIException e) {
             throw new GitLogException("Unable to get the log", e);
@@ -95,16 +89,35 @@ public class GitCommitController {
         }
     }
 
+    public List<GitCommitEntry> getAllCommitsOfClass(Repository repository, GitCommitEntry first, GitCommitEntry second, String path) throws GitLogException {
+        try (Git git = new Git(repository)) {
+            ObjectId firstId = ObjectId.fromString(first.hash());
+            ObjectId secondId = ObjectId.fromString(second.hash());
+            List<GitCommitEntry> entries = new ArrayList<>();
+            git.log().addRange(firstId, secondId).addPath(path).call().iterator().forEachRemaining(c -> entries.add(commitFromRevCommit(c)));
+            return entries;
+        } catch (MissingObjectException e) {
+            throw new GitLogException("Missing entry", e);
+        } catch (IOException e) {
+            throw new GitLogException("Could not load commits", e);
+        } catch (NoHeadException e) {
+            throw new GitLogException("Could not find HEAD", e);
+        } catch (GitAPIException e) {
+            throw new GitLogException("Could not call git API", e);
+        }
+    }
+
     public List<GitDiffEntry> getAllDifferencesOfClass(Repository repository, GitCommitEntry first, GitCommitEntry second, String path) throws GitDiffException {
-        try (DiffFormatter diffFormatter = new DiffFormatter(DisabledOutputStream.INSTANCE); Git git = new Git(repository)) {
+        try (DiffFormatter diffFormatter = new DiffFormatter(DisabledOutputStream.INSTANCE)) {
             diffFormatter.setRepository(repository);
             diffFormatter.setPathFilter(PathFilter.create(path));
-            Iterator<RevCommit> commitsInBetween = git.log().addRange(ObjectId.fromString(first.hash()), ObjectId.fromString(second.hash())).addPath(path).call().iterator();
-            RevCommit previous = commitsInBetween.next();
             List<GitDiffEntry> diffEntries = new ArrayList<>();
-            while (commitsInBetween.hasNext()) {
-                RevCommit current = commitsInBetween.next();
-                List<DiffEntry> diffs = diffFormatter.scan(previous.getTree(), current.getTree());
+            List<GitCommitEntry> commitsInBetween = getAllCommitsOfClass(repository, first, second, path);
+            if (commitsInBetween.isEmpty()) return diffEntries;
+            GitCommitEntry previous = commitsInBetween.get(0);
+            for (int i = 1; i < commitsInBetween.size(); i++) {
+                GitCommitEntry current = commitsInBetween.get(i);
+                List<DiffEntry> diffs = diffFormatter.scan(previous.tree(), current.tree());
                 for (DiffEntry diff : diffs) {
                     FileHeader header = diffFormatter.toFileHeader(diff);
                     Pair<Integer, Integer> addedAndDeleted = calculateAddedAndDeleted(header.toEditList());
@@ -119,10 +132,8 @@ public class GitCommitController {
             throw new GitDiffException("Missing entry", e);
         } catch (IOException e) {
             throw new GitDiffException("Could not load commits", e);
-        } catch (NoHeadException e) {
-            throw new GitDiffException("Could not find HEAD", e);
-        } catch (GitAPIException e) {
-            throw new GitDiffException("Could not call git API", e);
+        } catch (GitLogException e) {
+            throw new GitDiffException("Could not get list of commits", e);
         }
     }
 
@@ -170,5 +181,13 @@ public class GitCommitController {
             }
         }
         return new Pair<>(added, deleted);
+    }
+
+    private GitCommitEntry commitFromRevCommit(RevCommit commit) {
+        String hash = commit.getName();
+        String message = commit.getShortMessage();
+        LocalDateTime date = LocalDateTime.ofInstant(commit.getCommitterIdent().getWhenAsInstant(), commit.getCommitterIdent().getZoneId());
+        RevTree tree = commit.getTree();
+        return new GitCommitEntry(hash, message, date, tree);
     }
 }
