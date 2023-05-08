@@ -8,6 +8,7 @@ import it.uniroma2.alessandrolioi.git.models.GitDiffEntry;
 import it.uniroma2.alessandrolioi.utils.Pair;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.api.errors.NoHeadException;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.Edit;
@@ -21,6 +22,7 @@ import org.eclipse.jgit.patch.FileHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.eclipse.jgit.treewalk.filter.PathSuffixFilter;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
 
@@ -38,11 +40,9 @@ public class GitCommitController {
                 for (RevCommit commit : git.log().all().add(repository.resolve(branch.getName())).call()) {
                     String hash = commit.getName();
                     String message = commit.getShortMessage();
-                    String authorName = commit.getAuthorIdent().getName();
-                    String authorEmail = commit.getAuthorIdent().getEmailAddress();
                     LocalDateTime date = LocalDateTime.ofInstant(commit.getCommitterIdent().getWhenAsInstant(), commit.getCommitterIdent().getZoneId());
                     RevTree tree = commit.getTree();
-                    GitCommitEntry entry = new GitCommitEntry(hash, message, authorName, authorEmail, date, tree);
+                    GitCommitEntry entry = new GitCommitEntry(hash, message, date, tree);
                     entries.add(entry);
                 }
             }
@@ -59,11 +59,11 @@ public class GitCommitController {
         return entries;
     }
 
-    public List<String> getClassList(Repository repository, GitCommitEntry commit) throws GitLogException {
+    public List<String> getClassList(Repository repository, RevTree tree) throws GitLogException {
         try (TreeWalk walk = new TreeWalk(repository)) {
             List<String> classes = new ArrayList<>();
             // Set base commit
-            walk.addTree(commit.tree());
+            walk.addTree(tree);
             // Explore sub-folders
             walk.setRecursive(true);
             // Exclude non-java files
@@ -92,6 +92,37 @@ public class GitCommitController {
             throw new GitFileException("Git object not found", e);
         } catch (IOException e) {
             throw new GitFileException("Reading failed", e);
+        }
+    }
+
+    public List<GitDiffEntry> getAllDifferencesOfClass(Repository repository, GitCommitEntry first, GitCommitEntry second, String path) throws GitDiffException {
+        try (DiffFormatter diffFormatter = new DiffFormatter(DisabledOutputStream.INSTANCE); Git git = new Git(repository)) {
+            diffFormatter.setRepository(repository);
+            diffFormatter.setPathFilter(PathFilter.create(path));
+            Iterator<RevCommit> commitsInBetween = git.log().addRange(ObjectId.fromString(first.hash()), ObjectId.fromString(second.hash())).addPath(path).call().iterator();
+            RevCommit previous = commitsInBetween.next();
+            List<GitDiffEntry> diffEntries = new ArrayList<>();
+            while (commitsInBetween.hasNext()) {
+                RevCommit current = commitsInBetween.next();
+                List<DiffEntry> diffs = diffFormatter.scan(previous.getTree(), current.getTree());
+                for (DiffEntry diff : diffs) {
+                    FileHeader header = diffFormatter.toFileHeader(diff);
+                    Pair<Integer, Integer> addedAndDeleted = calculateAddedAndDeleted(header.toEditList());
+                    GitDiffEntry entry = new GitDiffEntry(diff, addedAndDeleted.first(), addedAndDeleted.second());
+                    diffEntries.add(entry);
+                }
+            }
+            return diffEntries;
+        } catch (CorruptObjectException e) {
+            throw new GitDiffException("Corrupt entry", e);
+        } catch (MissingObjectException e) {
+            throw new GitDiffException("Missing entry", e);
+        } catch (IOException e) {
+            throw new GitDiffException("Could not load commits", e);
+        } catch (NoHeadException e) {
+            throw new GitDiffException("Could not find HEAD", e);
+        } catch (GitAPIException e) {
+            throw new GitDiffException("Could not call git API", e);
         }
     }
 
