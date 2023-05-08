@@ -2,7 +2,7 @@ package it.uniroma2.alessandrolioi.dataset.controllers;
 
 import it.uniroma2.alessandrolioi.dataset.exceptions.DatasetWriterException;
 import it.uniroma2.alessandrolioi.dataset.models.DatasetEntry;
-import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
+import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -11,15 +11,15 @@ import java.util.List;
 import java.util.Map;
 
 public class WriterController {
-    public void writeToFile(String output, List<JiraVersion> versions, List<String> metrics, Map<Integer, List<String>> keys, Map<String, List<DatasetEntry>> values) throws DatasetWriterException {
+    public void writeToFile(String output, List<GitCommitEntry> revisions, List<String> metrics, Map<String, List<DatasetEntry>> entries) throws DatasetWriterException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(output))) {
             writeHeader(writer, metrics);
             // For every release (sorted)
-            for (int i = 0; i < versions.size(); i++) {
-                List<String> classList = keys.get(i);
-                // For every class in the release
-                for (String aClass : classList) {
-                    DatasetEntry entry = values.get(aClass).get(i);
+            for (int i = 0; i < revisions.size(); i++) {
+                // Get current release/revision
+                GitCommitEntry revision = revisions.get(i);
+                for (String aClass : revision.classList()) {
+                    DatasetEntry entry = entries.get(aClass).get(i);
                     // Write number of release and class name
                     writer.write("%d,%s".formatted(i + 1, aClass));
                     // Write Metrics and Buggy

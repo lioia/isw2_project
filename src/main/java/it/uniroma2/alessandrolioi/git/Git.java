@@ -46,19 +46,25 @@ public class Git {
         return controller.recurseClean(folder);
     }
 
-    public List<String> getClassList(GitCommitEntry commit) throws GitLogException {
-        GitCommitController controller = new GitCommitController();
-        return controller.getClassList(repository, commit);
-    }
-
     public Map<String, GitDiffEntry> getDifferences(GitCommitEntry first, GitCommitEntry second) throws GitDiffException {
         GitCommitController controller = new GitCommitController();
         return controller.getDifferences(repository, first, second);
     }
 
+    public List<GitDiffEntry> getAllDifferencesOfClass(GitCommitEntry first, GitCommitEntry second, String aClass) throws GitDiffException {
+        GitCommitController controller = new GitCommitController();
+        return controller.getAllDifferencesOfClass(repository, first, second, aClass);
+    }
+
     public String getContentsOfClass(GitCommitEntry commit, String filePath) throws GitFileException {
         GitCommitController controller = new GitCommitController();
         return controller.getContentsOfFile(repository, commit, filePath);
+    }
+
+    public void loadClassesOfRevisions(List<GitCommitEntry> values) throws GitLogException {
+        GitCommitController controller = new GitCommitController();
+        for (GitCommitEntry commit : values)
+            commit.setClassList(controller.getClassList(repository, commit.tree()));
     }
 
     public List<GitCommitEntry> getCommits() {

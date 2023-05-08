@@ -12,7 +12,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class App {
-    static Logger logger = Logger.getLogger(App.class.getName());
+    static final Logger logger = Logger.getLogger(App.class.getName());
 
     public static void main(String[] args) {
         String project = "bookkeeper";
@@ -28,10 +28,13 @@ public class App {
 
             JiraGitIntegration integration = new JiraGitIntegration(git.getCommits());
             Map<JiraVersion, GitCommitEntry> revisions = integration.findRevisionsOfVersions(bookkeeper.getVersions());
+            git.loadClassesOfRevisions(revisions.values().stream().toList());
             DatasetBuilder dataset = new DatasetBuilder(revisions, git);
             dataset.applyLOCMetric();
             dataset.applyLOCTouchedMetric();
+            dataset.applyMaxLOCAddedMetric();
             dataset.applyChurnMetric();
+            dataset.applyMaxChurnMetric();
             dataset.writeToFile("output.csv");
         } catch (Exception e) {
             logger.log(Level.SEVERE, e.getMessage());
