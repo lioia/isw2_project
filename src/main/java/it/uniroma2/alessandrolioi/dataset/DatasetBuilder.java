@@ -125,6 +125,24 @@ public class DatasetBuilder {
         metrics.add(metric);
     }
 
+    public void applyNumberOfRevisionsMetric() throws MetricException {
+        String metric = "NR";
+        MetricController controller = new MetricController();
+        controller.applyCumulativeMetric(metric, git, revisions, entries, diffs -> String.valueOf(diffs.size()));
+        metrics.add(metric);
+    }
+
+    public void applyAll() throws MetricException {
+        applyLOCMetric();
+        applyLOCTouchedMetric();
+        applyMaxLOCAddedMetric();
+        applyAverageLOCAddedMetric();
+        applyChurnMetric();
+        applyMaxChurnMetric();
+        applyAverageChurnMetric();
+        applyNumberOfRevisionsMetric();
+    }
+
     public void writeToFile(String output) throws DatasetWriterException {
         WriterController controller = new WriterController();
         controller.writeToFile(output, revisions, metrics, entries);
