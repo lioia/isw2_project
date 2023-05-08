@@ -50,7 +50,7 @@ public class WriterController {
                 writer.write(",%s".formatted(value));
             }
             // Write buggy field
-            writer.write(",%s\n".formatted(entry.buggy()));
+            writer.write(",%s\n".formatted(entry.isBuggy()));
         } catch (IOException e) {
             throw new DatasetWriterException("Could not write entry to file", e);
         }

@@ -64,6 +64,7 @@ public class DatasetBuilder {
         metrics.add(metric);
     }
 
+    // LOC Touched, Churn
     private void applyDifferenceMetrics() throws MetricException {
         // Initialize first release
         for (String aClass : revisions.get(0).classList()) {
@@ -77,6 +78,7 @@ public class DatasetBuilder {
         metrics.addAll(List.of("LOC Touched", "Churn"));
     }
 
+    // Average LOC Added, Max LOC Added, Average Churn, Max Churn
     private void applyCumulativeMetrics() throws MetricException {
         // Initialize first release
         for (String aClass : revisions.get(0).classList()) {
@@ -93,6 +95,7 @@ public class DatasetBuilder {
     }
 
 
+    // NR and Age
     public void applyListMetrics() throws MetricException {
         // Initialize first release
         for (String aClass : revisions.get(0).classList()) {
@@ -120,7 +123,8 @@ public class DatasetBuilder {
         metrics.addAll(List.of("NR", "Age"));
     }
 
-    public void applyFixedTicketsMetric() throws MetricException {
+    // NFix and set Buggy
+    public void applyTicketsMetric() throws MetricException {
         // Initialize first release
         for (String aClass : revisions.get(0).classList())
             for (DatasetEntry entry : entries.get(aClass))
@@ -137,6 +141,9 @@ public class DatasetBuilder {
             List<String> common = fixed.filter(commits::contains).toList();
             // Save the size of the list
             entries.get(info.aClass()).get(info.versionIndex()).metrics().put("NFix", String.valueOf(common.size()));
+            Stream<String> injected = version.injected().stream().map(i -> integration.issues().get(i).hash());
+            List<String> injectedCommon = injected.filter(commits::contains).toList();
+            if (!injectedCommon.isEmpty()) entries.get(info.aClass()).get(info.versionIndex()).setBuggy(true);
             return null;
         });
         metrics.add("NFix");
@@ -147,7 +154,7 @@ public class DatasetBuilder {
         applyDifferenceMetrics();
         applyCumulativeMetrics();
         applyListMetrics();
-        applyFixedTicketsMetric();
+        applyTicketsMetric();
     }
 
     public void writeToFile(String output) throws DatasetWriterException {
