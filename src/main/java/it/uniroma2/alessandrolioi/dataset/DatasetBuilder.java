@@ -141,7 +141,9 @@ public class DatasetBuilder {
             List<String> common = fixed.filter(commits::contains).toList();
             // Save the size of the list
             entries.get(info.aClass()).get(info.versionIndex()).metrics().put("NFix", String.valueOf(common.size()));
-            if(!common.isEmpty()) entries.get(info.aClass()).get(info.versionIndex()).setBuggy(true);
+            Stream<String> injected = version.injected().stream().map(i -> integration.issues().get(i).hash());
+            List<String> injectedCommon = injected.filter(commits::contains).toList();
+            if (!injectedCommon.isEmpty()) entries.get(info.aClass()).get(info.versionIndex()).setBuggy(true);
             return null;
         });
         metrics.add("NFix");
