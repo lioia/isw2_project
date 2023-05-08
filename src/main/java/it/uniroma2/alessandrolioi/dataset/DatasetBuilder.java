@@ -109,8 +109,8 @@ public class DatasetBuilder {
                 info.commits().sort(Comparator.comparing(GitCommitEntry::commitDate));
                 LocalDateTime first = info.commits().get(0).commitDate();
                 LocalDateTime last = info.commits().get(info.commits().size() - 1).commitDate();
-                double totalTime = info.first().commitDate().toEpochSecond(ZoneOffset.UTC) - info.second().commitDate().toEpochSecond(ZoneOffset.UTC);
-                double time = last.toEpochSecond(ZoneOffset.UTC) - first.toEpochSecond(ZoneOffset.UTC);
+                double totalTime = (double) info.first().commitDate().toEpochSecond(ZoneOffset.UTC) - info.second().commitDate().toEpochSecond(ZoneOffset.UTC);
+                double time = (double) last.toEpochSecond(ZoneOffset.UTC) - first.toEpochSecond(ZoneOffset.UTC);
                 age = Math.abs(time / totalTime);
             }
             entries.get(info.aClass()).get(info.versionIndex()).metrics().put("NR", String.valueOf(info.commits().size()));

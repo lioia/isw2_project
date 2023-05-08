@@ -2,12 +2,9 @@ package it.uniroma2.alessandrolioi;
 
 import it.uniroma2.alessandrolioi.dataset.DatasetBuilder;
 import it.uniroma2.alessandrolioi.git.Git;
-import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
 import it.uniroma2.alessandrolioi.integration.JiraGitIntegration;
 import it.uniroma2.alessandrolioi.jira.Jira;
-import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 

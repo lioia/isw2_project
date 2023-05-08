@@ -32,6 +32,9 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 public class GitCommitController {
+    private static final String LOAD_EXCEPTION_MESSAGE = "Could not load commits";
+    private static final String MISSING_EXCEPTION_MESSAGE = "Missing entry";
+
     public List<GitCommitEntry> getCommits(Repository repository) throws GitLogException {
         List<GitCommitEntry> entries = new ArrayList<>();
         try (Git git = new Git(repository)) {
@@ -97,9 +100,9 @@ public class GitCommitController {
             git.log().addRange(firstId, secondId).addPath(path).call().iterator().forEachRemaining(c -> entries.add(commitFromRevCommit(c)));
             return entries;
         } catch (MissingObjectException e) {
-            throw new GitLogException("Missing entry", e);
+            throw new GitLogException(MISSING_EXCEPTION_MESSAGE, e);
         } catch (IOException e) {
-            throw new GitLogException("Could not load commits", e);
+            throw new GitLogException(LOAD_EXCEPTION_MESSAGE, e);
         } catch (NoHeadException e) {
             throw new GitLogException("Could not find HEAD", e);
         } catch (GitAPIException e) {
@@ -107,7 +110,7 @@ public class GitCommitController {
         }
     }
 
-    public List<GitDiffEntry> getAllDifferencesOfClass(Repository repository, GitCommitEntry first, GitCommitEntry second, String path) throws GitDiffException {
+    public List<GitDiffEntry> getAllDifferencesOfClass(Repository repository, GitCommitEntry first, GitCommitEntry second, String path) throws GitDiffException, GitLogException {
         try (DiffFormatter diffFormatter = new DiffFormatter(DisabledOutputStream.INSTANCE)) {
             diffFormatter.setRepository(repository);
             diffFormatter.setPathFilter(PathFilter.create(path));
@@ -129,11 +132,9 @@ public class GitCommitController {
         } catch (CorruptObjectException e) {
             throw new GitDiffException("Corrupt entry", e);
         } catch (MissingObjectException e) {
-            throw new GitDiffException("Missing entry", e);
+            throw new GitDiffException(MISSING_EXCEPTION_MESSAGE, e);
         } catch (IOException e) {
-            throw new GitDiffException("Could not load commits", e);
-        } catch (GitLogException e) {
-            throw new GitDiffException("Could not get list of commits", e);
+            throw new GitDiffException(LOAD_EXCEPTION_MESSAGE, e);
         }
     }
 
@@ -159,9 +160,9 @@ public class GitCommitController {
         } catch (CorruptObjectException e) {
             throw new GitDiffException("Corrupt entry", e);
         } catch (MissingObjectException e) {
-            throw new GitDiffException("Missing entry", e);
+            throw new GitDiffException(MISSING_EXCEPTION_MESSAGE, e);
         } catch (IOException e) {
-            throw new GitDiffException("Could not load commits", e);
+            throw new GitDiffException(LOAD_EXCEPTION_MESSAGE, e);
         }
     }
 

@@ -56,7 +56,7 @@ public class Git {
         return controller.getDifferences(repository, first, second);
     }
 
-    public List<GitDiffEntry> getAllDifferencesOfClass(GitCommitEntry first, GitCommitEntry second, String aClass) throws GitDiffException {
+    public List<GitDiffEntry> getAllDifferencesOfClass(GitCommitEntry first, GitCommitEntry second, String aClass) throws GitDiffException, GitLogException {
         GitCommitController controller = new GitCommitController();
         return controller.getAllDifferencesOfClass(repository, first, second, aClass);
     }

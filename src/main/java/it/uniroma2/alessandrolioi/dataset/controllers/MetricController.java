@@ -9,10 +9,7 @@ import it.uniroma2.alessandrolioi.git.exceptions.GitFileException;
 import it.uniroma2.alessandrolioi.git.exceptions.GitLogException;
 import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
 import it.uniroma2.alessandrolioi.git.models.GitDiffEntry;
-import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +32,7 @@ public class MetricController {
                 }
             }
         } catch (GitFileException e) {
-            throw new MetricException("Could not get file contents", e);
+            throw new MetricException(e);
         }
     }
 
@@ -68,7 +65,7 @@ public class MetricController {
                 previous = current;
             }
         } catch (GitDiffException e) {
-            throw new MetricException("Could not load differences between commits", e);
+            throw new MetricException(e);
         }
     }
 
@@ -102,8 +99,8 @@ public class MetricController {
                 // Set previous version as the current for the next iteration
                 previous = current;
             }
-        } catch (GitDiffException e) {
-            throw new MetricException("Could not load differences", e);
+        } catch (GitDiffException | GitLogException e) {
+            throw new MetricException(e);
         }
     }
 
@@ -125,7 +122,7 @@ public class MetricController {
                 previous = current;
             }
         } catch (GitLogException e) {
-            throw new MetricException("Could not load commits", e);
+            throw new MetricException(e);
         }
     }
 }
