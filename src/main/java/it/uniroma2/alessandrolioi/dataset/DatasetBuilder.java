@@ -7,6 +7,7 @@ import it.uniroma2.alessandrolioi.dataset.exceptions.MetricException;
 import it.uniroma2.alessandrolioi.dataset.models.DatasetEntry;
 import it.uniroma2.alessandrolioi.git.Git;
 import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
+import it.uniroma2.alessandrolioi.git.models.GitDiffEntry;
 import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 
 import java.util.*;
@@ -88,8 +89,18 @@ public class DatasetBuilder {
         String metric = "Max LOC Added";
         MetricController controller = new MetricController();
         controller.applyCumulativeMetric(metric, git, revisions, entries, diffs -> {
-            Optional<Integer> max = diffs.stream().map(diff -> diff.added() + diff.deleted()).max(Comparator.naturalOrder());
+            Optional<Integer> max = diffs.stream().map(GitDiffEntry::added).max(Comparator.naturalOrder());
             return max.map(Object::toString).orElse("0");
+        });
+        metrics.add(metric);
+    }
+
+    public void applyAverageLOCAddedMetric() throws MetricException {
+        String metric = "Average LOC Added";
+        MetricController controller = new MetricController();
+        controller.applyCumulativeMetric(metric, git, revisions, entries, diffs -> {
+            Optional<Integer> sum = diffs.stream().map(GitDiffEntry::added).reduce(Integer::sum);
+            return sum.map(integer -> String.valueOf(integer / diffs.size())).orElse("0");
         });
         metrics.add(metric);
     }
@@ -100,6 +111,16 @@ public class DatasetBuilder {
         controller.applyCumulativeMetric(metric, git, revisions, entries, diffs -> {
             Optional<Integer> max = diffs.stream().map(diff -> diff.added() - diff.deleted()).max(Comparator.naturalOrder());
             return max.map(Object::toString).orElse("0");
+        });
+        metrics.add(metric);
+    }
+
+    public void applyAverageChurnMetric() throws MetricException {
+        String metric = "Average Churn";
+        MetricController controller = new MetricController();
+        controller.applyCumulativeMetric(metric, git, revisions, entries, diffs -> {
+            Optional<Integer> sum = diffs.stream().map(diff -> diff.added() - diff.deleted()).reduce(Integer::sum);
+            return sum.map(integer -> String.valueOf(integer / diffs.size())).orElse("0");
         });
         metrics.add(metric);
     }
