@@ -5,7 +5,7 @@ import java.util.Map;
 
 public final class DatasetEntry {
     private final Map<String, String> metrics;
-    private final boolean buggy;
+    private boolean buggy;
 
     public DatasetEntry() {
         this.metrics = new HashMap<>();
@@ -16,7 +16,11 @@ public final class DatasetEntry {
         return metrics;
     }
 
-    public boolean buggy() {
+    public boolean isBuggy() {
         return buggy;
+    }
+
+    public void setBuggy(boolean buggy) {
+        this.buggy = buggy;
     }
 }
