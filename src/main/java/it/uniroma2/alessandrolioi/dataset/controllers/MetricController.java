@@ -9,7 +9,11 @@ import it.uniroma2.alessandrolioi.git.exceptions.GitFileException;
 import it.uniroma2.alessandrolioi.git.exceptions.GitLogException;
 import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
 import it.uniroma2.alessandrolioi.git.models.GitDiffEntry;
+import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -28,20 +32,13 @@ public class MetricController {
                 }
             }
         } catch (GitFileException e) {
-            throw new MetricException(metric, "Could not get file contents", e);
+            throw new MetricException("Could not get file contents", e);
         }
     }
 
-    public void applyDifferenceMetric(String metric, Git git, List<GitCommitEntry> revisions,
-                                      Map<String, List<DatasetEntry>> entries,
-                                      Function<GitDiffEntry, String> func) throws MetricException {
+    public void applyDifferenceMetric(Git git, List<GitCommitEntry> revisions, Map<String, List<DatasetEntry>> entries) throws MetricException {
         try {
             GitCommitEntry previous = revisions.get(0);
-            // First version cannot calculate this metric,
-            // because it does not have a previous revision that it can compare it to
-            for (String aClass : previous.classList())
-                entries.get(aClass).get(0).metrics().put(metric, "0");
-
             // For every consecutive pair of classes
             for (int i = 1; i < revisions.size(); i++) {
                 GitCommitEntry current = revisions.get(i);
@@ -51,66 +48,68 @@ public class MetricController {
                 // For every class in the current release
                 for (String aClass : current.classList()) {
                     GitDiffEntry diff = diffs.get(aClass);
-                    String result = func.apply(diff);
-                    entries.get(aClass).get(i).metrics().put(metric, result);
+                    int locTouched = 0;
+                    int churn = 0;
+                    if (diff != null) {
+                        locTouched = diff.touched();
+                        churn = diff.churn();
+                    }
+                    entries.get(aClass).get(i).metrics().put("LOC Touched", String.valueOf(locTouched));
+                    entries.get(aClass).get(i).metrics().put("Churn", String.valueOf(churn));
                 }
 
                 // Set previous version as the current for the next iteration
                 previous = current;
             }
         } catch (GitDiffException e) {
-            throw new MetricException(metric, "Could not load differences between commits", e);
+            throw new MetricException("Could not load differences between commits", e);
         }
     }
 
-    public void applyCumulativeMetric(String metric, Git git, List<GitCommitEntry> revisions,
-                                      Map<String, List<DatasetEntry>> entries,
-                                      Function<List<GitDiffEntry>, String> func) throws MetricException {
+    public void applyCumulativeMetric(Git git, List<GitCommitEntry> revisions, Map<String, List<DatasetEntry>> entries) throws MetricException {
         try {
             GitCommitEntry previous = revisions.get(0);
-            // First version cannot calculate this metric,
-            // because it does not have a previous revision that it can compare it to
-            for (String aClass : revisions.get(0).classList())
-                entries.get(aClass).get(0).metrics().put(metric, "0");
 
             // For every consecutive pair of versions
             for (int i = 1; i < revisions.size(); i++) {
                 GitCommitEntry current = revisions.get(i);
                 for (String aClass : current.classList()) {
                     List<GitDiffEntry> diffs = git.getAllDifferencesOfClass(previous, current, aClass);
-                    String result = func.apply(diffs);
-                    entries.get(aClass).get(i).metrics().put(metric, result);
+                    int size = diffs.size();
+                    if (diffs.isEmpty()) size = 1;
+                    int maxLocAdded = diffs.stream().map(GitDiffEntry::added).max(Comparator.naturalOrder()).orElse(0);
+                    entries.get(aClass).get(i).metrics().put("Max LOC Added", String.valueOf(maxLocAdded));
+                    int maxChurn = diffs.stream().map(GitDiffEntry::churn).max(Comparator.naturalOrder()).orElse(0);
+                    entries.get(aClass).get(i).metrics().put("Max Churn", String.valueOf(maxChurn));
+                    int sumLocAdded = diffs.stream().map(GitDiffEntry::added).reduce(Integer::sum).orElse(0);
+                    entries.get(aClass).get(i).metrics().put("Average LOC Added", String.valueOf(sumLocAdded / size));
+                    int sumChurn = diffs.stream().map(GitDiffEntry::churn).reduce(Integer::sum).orElse(0);
+                    entries.get(aClass).get(i).metrics().put("Average Churn", String.valueOf(sumChurn / size));
                 }
                 previous = current;
             }
         } catch (GitDiffException e) {
-            throw new MetricException(metric, "Could not load differences", e);
+            throw new MetricException("Could not load differences", e);
         }
     }
 
-    public void applyListMetric(String metric, Git git, List<GitCommitEntry> revisions,
+    public void applyListMetric(Git git, List<GitCommitEntry> revisions,
                                 Map<String, List<DatasetEntry>> entries,
-                                Function<RevisionPairInfo, String> func) throws MetricException {
+                                Function<RevisionPairInfo, Void> func) throws MetricException {
         try {
             GitCommitEntry previous = revisions.get(0);
-            // First version cannot calculate this metric,
-            // because it does not have a previous revision that it can compare it to
-            for (String aClass : revisions.get(0).classList())
-                entries.get(aClass).get(0).metrics().put(metric, "0");
-
             // For every consecutive pair of versions
             for (int i = 1; i < revisions.size(); i++) {
                 GitCommitEntry current = revisions.get(i);
                 for (String aClass : current.classList()) {
                     List<GitCommitEntry> commits = git.getAllCommitsOfClass(previous, current, aClass);
-                    RevisionPairInfo info = new RevisionPairInfo(previous, current, commits);
-                    String result = func.apply(info);
-                    entries.get(aClass).get(i).metrics().put(metric, result);
+                    RevisionPairInfo info = new RevisionPairInfo(previous, current, i, aClass, commits);
+                    func.apply(info);
                 }
                 previous = current;
             }
         } catch (GitLogException e) {
-            throw new RuntimeException(e);
+            throw new MetricException("Could not load commits", e);
         }
     }
 }

@@ -27,10 +27,10 @@ public class App {
             git = new Git(project, "https://github.com/apache/bookkeeper", "master");
 
             JiraGitIntegration integration = new JiraGitIntegration(git.getCommits());
-            Map<JiraVersion, GitCommitEntry> revisions = integration.findRevisionsOfVersions(bookkeeper.getVersions());
-            git.loadClassesOfRevisions(revisions.values().stream().toList());
-            DatasetBuilder dataset = new DatasetBuilder(revisions, git);
-            dataset.applyAll();
+            integration.findRevisions(bookkeeper.getVersions());
+            git.loadClassesOfRevisions(integration.revisions().values().stream().toList());
+            DatasetBuilder dataset = new DatasetBuilder(integration, git);
+            dataset.applyMetrics();
             dataset.writeToFile("output.csv");
         } catch (Exception e) {
             logger.log(Level.SEVERE, e.getMessage());

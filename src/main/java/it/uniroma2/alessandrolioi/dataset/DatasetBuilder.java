@@ -7,158 +7,137 @@ import it.uniroma2.alessandrolioi.dataset.exceptions.MetricException;
 import it.uniroma2.alessandrolioi.dataset.models.DatasetEntry;
 import it.uniroma2.alessandrolioi.git.Git;
 import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
-import it.uniroma2.alessandrolioi.git.models.GitDiffEntry;
+import it.uniroma2.alessandrolioi.integration.JiraGitIntegration;
 import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.stream.Stream;
 
 public class DatasetBuilder {
     // Sorted list of revisions corresponding to a Jira release
+    private final List<JiraVersion> versions;
     private final List<GitCommitEntry> revisions;
+    private final JiraGitIntegration integration;
     private final Git git;
 
     // Maps class name to its metrics. i-th element in the list is the entry for the i-th version
     private final Map<String, List<DatasetEntry>> entries;
     private final List<String> metrics;
 
-    public DatasetBuilder(Map<JiraVersion, GitCommitEntry> revisionsMap, Git git) {
+    public DatasetBuilder(JiraGitIntegration integration, Git git) {
         this.revisions = new ArrayList<>();
         this.git = git;
         this.metrics = new ArrayList<>();
         this.entries = new HashMap<>();
+        this.integration = integration;
 
-        List<JiraVersion> sortedVersions = new ArrayList<>(revisionsMap.keySet().stream().toList());
-        sortedVersions.sort(Comparator.comparing(JiraVersion::releaseDate)); // Sort versions for release date
+        this.versions = new ArrayList<>(integration.revisions().keySet().stream().toList());
+        this.versions.sort(Comparator.comparing(JiraVersion::releaseDate)); // Sort versions for release date
 
         // Initialize `revisions`
-        for (JiraVersion version : sortedVersions) {
-            GitCommitEntry revision = revisionsMap.get(version);
+        for (JiraVersion version : this.versions) {
+            GitCommitEntry revision = integration.revisions().get(version);
 
             // Initialize `entries` map
             for (String aClass : revision.classList()) {
                 List<DatasetEntry> datasetEntries = new ArrayList<>();
-                for (int i = 0; i < sortedVersions.size(); i++)
+                for (int i = 0; i < this.versions.size(); i++)
                     datasetEntries.add(i, new DatasetEntry());
                 entries.put(aClass, datasetEntries);
             }
 
-            this.revisions.add(revision);
+            revisions.add(revision);
         }
     }
 
-    /*
-     * Pseudocode:
-     *   loop for every pair of consecutive releases:
-     *       loop for every class
-     *           calculate metric
-     *           add metric to entries[class].fields
-     *    add field to this.metrics
-     * */
-    public void applyLOCMetric() throws MetricException {
+    private void applyLOCMetric() throws MetricException {
         String metric = "LOC";
         MetricController controller = new MetricController();
         controller.applyLOCMetric(metric, git, revisions, entries);
         metrics.add(metric);
     }
 
-    public void applyLOCTouchedMetric() throws MetricException {
-        String metric = "LOC Touched";
+    private void applyDifferenceMetrics() throws MetricException {
+        // Initialize first release
+        for (String aClass : revisions.get(0).classList()) {
+            for (DatasetEntry entry : entries.get(aClass)) {
+                entry.metrics().put("LOC Touched", "0");
+                entry.metrics().put("Churn", "0");
+            }
+        }
         MetricController controller = new MetricController();
-        controller.applyDifferenceMetric(metric, git, revisions, entries, diff -> {
-            int locTouched = 0;
-            if (diff != null)
-                locTouched = diff.added() + diff.deleted();
-            return Integer.toString(locTouched);
+        controller.applyDifferenceMetric(git, revisions, entries);
+        metrics.addAll(List.of("LOC Touched", "Churn"));
+    }
+
+    private void applyCumulativeMetrics() throws MetricException {
+        // Initialize first release
+        for (String aClass : revisions.get(0).classList()) {
+            for (DatasetEntry entry : entries.get(aClass)) {
+                entry.metrics().put("Average LOC Added", "0");
+                entry.metrics().put("Max LOC Added", "0");
+                entry.metrics().put("Average Churn", "0");
+                entry.metrics().put("Max Churn", "0");
+            }
+        }
+        MetricController controller = new MetricController();
+        controller.applyCumulativeMetric(git, revisions, entries);
+        metrics.addAll(List.of("Average LOC Added", "Max LOC Added", "Average Churn", "Max Churn"));
+    }
+
+
+    public void applyListMetrics() throws MetricException {
+        // Initialize first release
+        for (String aClass : revisions.get(0).classList()) {
+            for (DatasetEntry entry : entries.get(aClass)) {
+                entry.metrics().put("NR", "0");
+                entry.metrics().put("Age", "0");
+            }
+        }
+        MetricController controller = new MetricController();
+        controller.applyListMetric(git, revisions, entries, info -> {
+            double age = 0.0;
+            if (!info.commits().isEmpty()) {
+                info.commits().sort(Comparator.comparing(GitCommitEntry::commitDate));
+                LocalDateTime first = info.commits().get(0).commitDate();
+                LocalDateTime last = info.commits().get(info.commits().size() - 1).commitDate();
+                double totalTime = info.first().commitDate().toEpochSecond(ZoneOffset.UTC) - info.second().commitDate().toEpochSecond(ZoneOffset.UTC);
+                double time = last.toEpochSecond(ZoneOffset.UTC) - first.toEpochSecond(ZoneOffset.UTC);
+                age = Math.abs(time / totalTime);
+            }
+            entries.get(info.aClass()).get(info.versionIndex()).metrics().put("NR", String.valueOf(info.commits().size()));
+            entries.get(info.aClass()).get(info.versionIndex()).metrics().put("Age", String.valueOf(age));
+            return null;
         });
-        metrics.add(metric);
+        metrics.addAll(List.of("NR", "Age"));
     }
 
-    public void applyChurnMetric() throws MetricException {
-        String metric = "Churn";
+    public void applyFixedTicketsMetric() throws MetricException {
+        // Initialize first release
+        for (String aClass : revisions.get(0).classList())
+            for (DatasetEntry entry : entries.get(aClass))
+                entry.metrics().put("NFix", "0");
         MetricController controller = new MetricController();
-        controller.applyDifferenceMetric(metric, git, revisions, entries, diff -> {
-            int churn = 0;
-            if (diff != null)
-                churn = diff.added() - diff.deleted();
-            return Integer.toString(churn);
+        controller.applyListMetric(git, revisions, entries, info -> {
+            JiraVersion version = versions.get(info.versionIndex());
+            List<String> commits = info.commits().stream().map(GitCommitEntry::hash).toList();
+            Stream<String> fixed = version.fixed().stream().map(i -> integration.issues().get(i).hash());
+            List<String> common = fixed.filter(commits::contains).toList();
+            System.out.println(common.size());
+            entries.get(info.aClass()).get(info.versionIndex()).metrics().put("NFix", String.valueOf(common.size()));
+            return null;
         });
-        metrics.add(metric);
+        metrics.add("NFix");
     }
 
-    public void applyMaxLOCAddedMetric() throws MetricException {
-        String metric = "Max LOC Added";
-        MetricController controller = new MetricController();
-        controller.applyCumulativeMetric(metric, git, revisions, entries, diffs -> {
-            Optional<Integer> max = diffs.stream().map(GitDiffEntry::added).max(Comparator.naturalOrder());
-            return max.map(Object::toString).orElse("0");
-        });
-        metrics.add(metric);
-    }
-
-    public void applyAverageLOCAddedMetric() throws MetricException {
-        String metric = "Average LOC Added";
-        MetricController controller = new MetricController();
-        controller.applyCumulativeMetric(metric, git, revisions, entries, diffs -> {
-            Optional<Integer> sum = diffs.stream().map(GitDiffEntry::added).reduce(Integer::sum);
-            return sum.map(integer -> String.valueOf(integer / diffs.size())).orElse("0");
-        });
-        metrics.add(metric);
-    }
-
-    public void applyMaxChurnMetric() throws MetricException {
-        String metric = "Max Churn Added";
-        MetricController controller = new MetricController();
-        controller.applyCumulativeMetric(metric, git, revisions, entries, diffs -> {
-            Optional<Integer> max = diffs.stream().map(diff -> diff.added() - diff.deleted()).max(Comparator.naturalOrder());
-            return max.map(Object::toString).orElse("0");
-        });
-        metrics.add(metric);
-    }
-
-    public void applyAverageChurnMetric() throws MetricException {
-        String metric = "Average Churn";
-        MetricController controller = new MetricController();
-        controller.applyCumulativeMetric(metric, git, revisions, entries, diffs -> {
-            Optional<Integer> sum = diffs.stream().map(diff -> diff.added() - diff.deleted()).reduce(Integer::sum);
-            return sum.map(integer -> String.valueOf(integer / diffs.size())).orElse("0");
-        });
-        metrics.add(metric);
-    }
-
-    public void applyNumberOfRevisionsMetric() throws MetricException {
-        String metric = "NR";
-        MetricController controller = new MetricController();
-        controller.applyListMetric(metric, git, revisions, entries, info -> String.valueOf(info.commits().size()));
-        metrics.add(metric);
-    }
-
-    public void applyAgeMetric() throws MetricException {
-        String metric = "Age";
-        MetricController controller = new MetricController();
-        controller.applyListMetric(metric, git, revisions, entries, info -> {
-            if (info.commits().isEmpty()) return "0";
-            info.commits().sort(Comparator.comparing(GitCommitEntry::commitDate));
-            LocalDateTime first = info.commits().get(0).commitDate();
-            LocalDateTime last = info.commits().get(info.commits().size() - 1).commitDate();
-            double totalTime = info.second().commitDate().toEpochSecond(ZoneOffset.UTC) - info.first().commitDate().toEpochSecond(ZoneOffset.UTC);
-            double time = last.toEpochSecond(ZoneOffset.UTC) - first.toEpochSecond(ZoneOffset.UTC);
-            return String.valueOf(time / totalTime);
-        });
-        metrics.add(metric);
-    }
-
-    public void applyAll() throws MetricException {
+    public void applyMetrics() throws MetricException {
         applyLOCMetric();
-        applyLOCTouchedMetric();
-        applyMaxLOCAddedMetric();
-        applyAverageLOCAddedMetric();
-        applyChurnMetric();
-        applyMaxChurnMetric();
-        applyAverageChurnMetric();
-        applyNumberOfRevisionsMetric();
-        applyAgeMetric();
+        applyDifferenceMetrics();
+        applyCumulativeMetrics();
+        applyListMetrics();
+        applyFixedTicketsMetric();
     }
 
     public void writeToFile(String output) throws DatasetWriterException {
