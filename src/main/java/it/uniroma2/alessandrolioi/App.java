@@ -30,11 +30,7 @@ public class App {
             Map<JiraVersion, GitCommitEntry> revisions = integration.findRevisionsOfVersions(bookkeeper.getVersions());
             git.loadClassesOfRevisions(revisions.values().stream().toList());
             DatasetBuilder dataset = new DatasetBuilder(revisions, git);
-            dataset.applyLOCMetric();
-            dataset.applyLOCTouchedMetric();
-            dataset.applyMaxLOCAddedMetric();
-            dataset.applyChurnMetric();
-            dataset.applyMaxChurnMetric();
+            dataset.applyAll();
             dataset.writeToFile("output.csv");
         } catch (Exception e) {
             logger.log(Level.SEVERE, e.getMessage());

@@ -10,6 +10,8 @@ import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
 import it.uniroma2.alessandrolioi.git.models.GitDiffEntry;
 import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 
 public class DatasetBuilder {
@@ -128,7 +130,22 @@ public class DatasetBuilder {
     public void applyNumberOfRevisionsMetric() throws MetricException {
         String metric = "NR";
         MetricController controller = new MetricController();
-        controller.applyCumulativeMetric(metric, git, revisions, entries, diffs -> String.valueOf(diffs.size()));
+        controller.applyListMetric(metric, git, revisions, entries, info -> String.valueOf(info.commits().size()));
+        metrics.add(metric);
+    }
+
+    public void applyAgeMetric() throws MetricException {
+        String metric = "Age";
+        MetricController controller = new MetricController();
+        controller.applyListMetric(metric, git, revisions, entries, info -> {
+            if (info.commits().isEmpty()) return "0";
+            info.commits().sort(Comparator.comparing(GitCommitEntry::commitDate));
+            LocalDateTime first = info.commits().get(0).commitDate();
+            LocalDateTime last = info.commits().get(info.commits().size() - 1).commitDate();
+            double totalTime = info.second().commitDate().toEpochSecond(ZoneOffset.UTC) - info.first().commitDate().toEpochSecond(ZoneOffset.UTC);
+            double time = last.toEpochSecond(ZoneOffset.UTC) - first.toEpochSecond(ZoneOffset.UTC);
+            return String.valueOf(time / totalTime);
+        });
         metrics.add(metric);
     }
 
@@ -141,6 +158,7 @@ public class DatasetBuilder {
         applyMaxChurnMetric();
         applyAverageChurnMetric();
         applyNumberOfRevisionsMetric();
+        applyAgeMetric();
     }
 
     public void writeToFile(String output) throws DatasetWriterException {

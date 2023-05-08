@@ -46,6 +46,11 @@ public class Git {
         return controller.recurseClean(folder);
     }
 
+    public List<GitCommitEntry> getAllCommitsOfClass(GitCommitEntry first, GitCommitEntry second, String aClass) throws GitLogException {
+        GitCommitController controller = new GitCommitController();
+        return controller.getAllCommitsOfClass(repository, first, second, aClass);
+    }
+
     public Map<String, GitDiffEntry> getDifferences(GitCommitEntry first, GitCommitEntry second) throws GitDiffException {
         GitCommitController controller = new GitCommitController();
         return controller.getDifferences(repository, first, second);

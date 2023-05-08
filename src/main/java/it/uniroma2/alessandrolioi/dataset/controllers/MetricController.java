@@ -2,9 +2,11 @@ package it.uniroma2.alessandrolioi.dataset.controllers;
 
 import it.uniroma2.alessandrolioi.dataset.exceptions.MetricException;
 import it.uniroma2.alessandrolioi.dataset.models.DatasetEntry;
+import it.uniroma2.alessandrolioi.dataset.models.RevisionPairInfo;
 import it.uniroma2.alessandrolioi.git.Git;
 import it.uniroma2.alessandrolioi.git.exceptions.GitDiffException;
 import it.uniroma2.alessandrolioi.git.exceptions.GitFileException;
+import it.uniroma2.alessandrolioi.git.exceptions.GitLogException;
 import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
 import it.uniroma2.alessandrolioi.git.models.GitDiffEntry;
 
@@ -83,6 +85,32 @@ public class MetricController {
             }
         } catch (GitDiffException e) {
             throw new MetricException(metric, "Could not load differences", e);
+        }
+    }
+
+    public void applyListMetric(String metric, Git git, List<GitCommitEntry> revisions,
+                                Map<String, List<DatasetEntry>> entries,
+                                Function<RevisionPairInfo, String> func) throws MetricException {
+        try {
+            GitCommitEntry previous = revisions.get(0);
+            // First version cannot calculate this metric,
+            // because it does not have a previous revision that it can compare it to
+            for (String aClass : revisions.get(0).classList())
+                entries.get(aClass).get(0).metrics().put(metric, "0");
+
+            // For every consecutive pair of versions
+            for (int i = 1; i < revisions.size(); i++) {
+                GitCommitEntry current = revisions.get(i);
+                for (String aClass : current.classList()) {
+                    List<GitCommitEntry> commits = git.getAllCommitsOfClass(previous, current, aClass);
+                    RevisionPairInfo info = new RevisionPairInfo(previous, current, commits);
+                    String result = func.apply(info);
+                    entries.get(aClass).get(i).metrics().put(metric, result);
+                }
+                previous = current;
+            }
+        } catch (GitLogException e) {
+            throw new RuntimeException(e);
         }
     }
 }
