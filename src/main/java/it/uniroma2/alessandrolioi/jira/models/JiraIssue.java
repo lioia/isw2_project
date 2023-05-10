@@ -74,10 +74,6 @@ public final class JiraIssue {
         this.ivIndex = ivIndex;
     }
 
-    public int getOvIndex() {
-        return ovIndex;
-    }
-
     public void setOvIndex(int ovIndex) {
         this.ovIndex = ovIndex;
     }

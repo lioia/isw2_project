@@ -8,12 +8,17 @@ import it.uniroma2.alessandrolioi.jira.models.JiraIssue;
 import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Jira {
+    static final Logger logger = Logger.getLogger("Jira");
+
     private final List<JiraVersion> versions;
     private final List<JiraIssue> issues;
 
     public Jira(String project) throws JiraRestException {
+        logger.log(Level.INFO, "Loading versions and tickets");
         JiraVersionController versionController = new JiraVersionController();
         JiraIssueController issueController = new JiraIssueController();
 
@@ -25,6 +30,7 @@ public class Jira {
         issues = issueController.loadIssues(project, first.releaseDate(), last.releaseDate());
         // Initial version classification
         issueController.classifyIssues(versions, issues);
+        logger.log(Level.INFO, "Versions and tickets successfully loaded");
     }
 
     public double calculateColdStart() {
