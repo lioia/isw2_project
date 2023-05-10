@@ -13,30 +13,38 @@ import org.eclipse.jgit.lib.Repository;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Git {
+    static final Logger logger = Logger.getLogger("Git");
+
     private final File folder;
     private final Repository repository;
     private final List<GitCommitEntry> commits;
 
     // Remote Repository
     public Git(String project, String url, String branch) throws GitRepoException, GitLogException {
+        logger.log(Level.INFO, "Cloning remote repository (this might take a while)...");
         GitRepoController repoController = new GitRepoController();
         GitCommitController commitController = new GitCommitController();
 
         this.folder = new File(project);
         this.repository = repoController.cloneRemote(folder, url, branch);
         this.commits = commitController.getCommits(repository);
+        logger.log(Level.INFO, "Repository successfully cloned");
     }
 
     // Local Repository
     public Git(String folderPath) throws GitRepoException, GitLogException {
+        logger.log(Level.INFO, "Loading local repository");
         GitRepoController repoController = new GitRepoController();
         GitCommitController commitController = new GitCommitController();
 
         this.folder = new File(folderPath);
         this.repository = repoController.loadLocal(folder);
         this.commits = commitController.getCommits(repository);
+        logger.log(Level.INFO, "Repository successfully loaded");
     }
 
     public boolean close() {

@@ -9,11 +9,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class App {
-    static final Logger logger = Logger.getLogger(App.class.getName());
+    static final Logger logger = Logger.getLogger("Main");
 
     public static void main(String[] args) {
         String project = "bookkeeper";
         String coldStartProject = "avro";
+        String outputName = "%sDataset.csv".formatted(project);
         Git git = null;
         try {
             Jira bookkeeper = new Jira(project);
@@ -21,14 +22,18 @@ public class App {
             double coldStart = avro.calculateColdStart();
             bookkeeper.applyProportion(coldStart);
 
-            git = new Git(project, "https://github.com/apache/bookkeeper", "master");
+            git = new Git(project, "https://github.com/apache/%s".formatted(project), "master");
 
+            logger.log(Level.INFO, "Loading integration between Jira and Git");
             JiraGitIntegration integration = new JiraGitIntegration(git.getCommits());
             integration.findRevisions(bookkeeper.getVersions());
             git.loadClassesOfRevisions(integration.revisions().values().stream().toList());
+            logger.log(Level.INFO, "Loading integration between Jira and Git");
+            logger.log(Level.INFO, "Creating dataset");
             DatasetBuilder dataset = new DatasetBuilder(integration, git);
             dataset.applyMetrics();
-            dataset.writeToFile("output.csv");
+            dataset.writeToFile(outputName);
+            logger.log(Level.INFO, "Dataset successfully created (%s)".formatted(outputName));
         } catch (Exception e) {
             logger.log(Level.SEVERE, e.getMessage());
         } finally {

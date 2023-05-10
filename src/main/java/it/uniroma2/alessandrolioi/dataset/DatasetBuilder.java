@@ -123,7 +123,7 @@ public class DatasetBuilder {
         metrics.addAll(List.of("NR", "Age"));
     }
 
-    // NFix and set Buggy
+    // NFix
     public void applyTicketsMetric() throws MetricException {
         // Initialize first release
         for (String aClass : revisions.get(0).classList())
@@ -141,8 +141,11 @@ public class DatasetBuilder {
             List<String> common = fixed.filter(commits::contains).toList();
             // Save the size of the list
             entries.get(info.aClass()).get(info.versionIndex()).metrics().put("NFix", String.valueOf(common.size()));
+            // Get the hashes of the commits relating to injected issues of this version
             Stream<String> injected = version.injected().stream().map(i -> integration.issues().get(i).hash());
+            // Get the intersection of the two lists
             List<String> injectedCommon = injected.filter(commits::contains).toList();
+            // Set class as buggy for this version if the intersection is not empty (there was at least a bug introduced by this class in this version)
             if (!injectedCommon.isEmpty()) entries.get(info.aClass()).get(info.versionIndex()).setBuggy(true);
             return null;
         });
