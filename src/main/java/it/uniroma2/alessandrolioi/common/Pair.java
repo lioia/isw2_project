@@ -1,4 +1,4 @@
-package it.uniroma2.alessandrolioi.utils;
+package it.uniroma2.alessandrolioi.common;
 
 public record Pair<T, S>(T first, S second) {
 }
