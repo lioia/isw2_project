@@ -131,25 +131,41 @@ public class DatasetBuilder {
                 entry.metrics().put("NFix", "0");
         MetricController controller = new MetricController();
         controller.applyListMetric(git, revisions, info -> {
+            // Get the hashes of the commits between two releases
+            List<String> commits = new ArrayList<>(info.commits().stream().map(GitCommitEntry::hash).toList());
+            // Add initial and last commit
+            commits.addAll(List.of(info.first().hash(), info.second().hash()));
             // Get the current version
             JiraVersion version = versions.get(info.versionIndex());
-            // Get the hashes of the commits between two releases
-            List<String> commits = info.commits().stream().map(GitCommitEntry::hash).toList();
             // Get the hashes of the commits relating to the fixed issues of this version
             Stream<String> fixed = version.fixed().stream().map(i -> integration.issues().get(i).hash());
             // Get the intersection of this two list
             List<String> common = fixed.filter(commits::contains).toList();
             // Save the size of the list
             entries.get(info.aClass()).get(info.versionIndex()).metrics().put("NFix", String.valueOf(common.size()));
-            // Get the hashes of the commits relating to injected issues of this version
-            Stream<String> injected = version.injected().stream().map(i -> integration.issues().get(i).hash());
-            // Get the intersection of the two lists
-            List<String> injectedCommon = injected.filter(commits::contains).toList();
-            // Set class as buggy for this version if the intersection is not empty (there was at least a bug introduced by this class in this version)
-            if (!injectedCommon.isEmpty()) entries.get(info.aClass()).get(info.versionIndex()).setBuggy(true);
             return null;
         });
         metrics.add("NFix");
+    }
+
+    public void setBuggy(int lastVersion) throws MetricException {
+        MetricController controller = new MetricController();
+        controller.applyListMetric(git, revisions, info -> {
+            // Get the hashes of the commits between two releases
+            List<String> commits = new ArrayList<>(info.commits().stream().map(GitCommitEntry::hash).toList());
+            // Add initial and last commit
+            commits.addAll(List.of(info.first().hash(), info.second().hash()));
+            // Get the current version
+            JiraVersion version = versions.get(info.versionIndex());
+            // Get the hashes of the commits of the injected issues of this release (filtering only the information known at the last version available)
+            Stream<String> injected = version.injected().stream()
+                    .filter(i -> i.getFvIndex() <= lastVersion)
+                    .map(i -> integration.issues().get(i).hash());
+            List<String> common = injected.filter(commits::contains).toList();
+            // Set a class as buggy if there is at least a commit in the common list
+            if (!common.isEmpty()) entries.get(info.aClass()).get(info.versionIndex()).setBuggy(true);
+            return null;
+        });
     }
 
     public void applyMetrics() throws MetricException {
@@ -160,8 +176,8 @@ public class DatasetBuilder {
         applyTicketsMetric();
     }
 
-    public void writeToFile(String output) throws DatasetWriterException {
+    public void writeToFile(String output, int numberOfVersions) throws DatasetWriterException {
         WriterController controller = new WriterController();
-        controller.writeToFile(output, revisions, metrics, entries);
+        controller.writeToFile(output, revisions, metrics, entries, numberOfVersions);
     }
 }

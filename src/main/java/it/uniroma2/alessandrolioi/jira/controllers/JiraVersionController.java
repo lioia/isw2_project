@@ -22,11 +22,10 @@ public class JiraVersionController {
             boolean released = jsonVersion.getBoolean(JiraVersion.RELEASED_FIELD);
             // Skipping versions that do not have a release date (only required field) or are set as not released
             if (!jsonVersion.has(JiraVersion.RELEASE_DATE_FIELD) || !released) continue;
-            String id = jsonVersion.getString(JiraVersion.ID_FIELD);
             String name = jsonVersion.getString(JiraVersion.NAME_FIELD);
             String releaseDateString = jsonVersion.getString(JiraVersion.RELEASE_DATE_FIELD);
             LocalDate date = LocalDate.parse(releaseDateString);
-            JiraVersion version = new JiraVersion(id, name, date);
+            JiraVersion version = new JiraVersion(name, date);
             versions.add(version);
         }
 

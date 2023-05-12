@@ -14,7 +14,6 @@ public class App {
     public static void main(String[] args) {
         String project = "bookkeeper";
         String coldStartProject = "avro";
-        String outputName = "%sDataset.csv".formatted(project);
         Git git = null;
         try {
             Jira bookkeeper = new Jira(project);
@@ -32,8 +31,12 @@ public class App {
             logger.log(Level.INFO, "Creating dataset");
             DatasetBuilder dataset = new DatasetBuilder(integration, git);
             dataset.applyMetrics();
-            dataset.writeToFile(outputName);
-            logger.log(Level.INFO, "Dataset successfully created (%s)".formatted(outputName));
+            for (int i = 1; i <= bookkeeper.getVersions().size(); i++) {
+                String outputName = "%sDataset%d.csv".formatted(project, i);
+                dataset.setBuggy(i);
+                dataset.writeToFile(outputName, i);
+                logger.log(Level.INFO, "Dataset successfully created (%s)".formatted(outputName));
+            }
         } catch (Exception e) {
             logger.log(Level.SEVERE, e.getMessage());
         } finally {

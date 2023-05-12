@@ -11,11 +11,11 @@ import java.util.List;
 import java.util.Map;
 
 public class WriterController {
-    public void writeToFile(String output, List<GitCommitEntry> revisions, List<String> metrics, Map<String, List<DatasetEntry>> entries) throws DatasetWriterException {
+    public void writeToFile(String output, List<GitCommitEntry> revisions, List<String> metrics, Map<String, List<DatasetEntry>> entries, int numberOfVersions) throws DatasetWriterException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(output))) {
             writeHeader(writer, metrics);
             // For every release (sorted)
-            for (int i = 0; i < revisions.size(); i++) {
+            for (int i = 0; i < numberOfVersions; i++) {
                 // Get current release/revision
                 GitCommitEntry revision = revisions.get(i);
                 for (String aClass : revision.classList()) {

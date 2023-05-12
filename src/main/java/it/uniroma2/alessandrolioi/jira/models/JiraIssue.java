@@ -22,19 +22,14 @@ public final class JiraIssue {
     private int ovIndex;
     private int fvIndex;
 
-    public JiraIssue(String key, LocalDate resolution, LocalDate created, List<LocalDate> affectedVersionsDates,
-                     int ivIndex, int ovIndex, int fvIndex) {
+    public JiraIssue(String key, LocalDate resolution, LocalDate created, List<LocalDate> affectedVersionsDates) {
         this.key = key;
         this.resolution = resolution;
         this.created = created;
         this.affectedVersionsDates = affectedVersionsDates;
-        this.ivIndex = ivIndex;
-        this.ovIndex = ovIndex;
-        this.fvIndex = fvIndex;
-    }
-
-    public JiraIssue(String key, LocalDate resolution, LocalDate created, List<LocalDate> affectedVersionsDates) {
-        this(key, resolution, created, affectedVersionsDates, -1, -1, -1);
+        this.ivIndex = -1;
+        this.ovIndex = -1;
+        this.fvIndex = -1;
     }
 
     public double calculateProportion() {
