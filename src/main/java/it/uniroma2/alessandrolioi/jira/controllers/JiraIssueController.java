@@ -3,7 +3,7 @@ package it.uniroma2.alessandrolioi.jira.controllers;
 import it.uniroma2.alessandrolioi.jira.exceptions.JiraRestException;
 import it.uniroma2.alessandrolioi.jira.models.JiraIssue;
 import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
-import it.uniroma2.alessandrolioi.utils.Pair;
+import it.uniroma2.alessandrolioi.common.Pair;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
