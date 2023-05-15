@@ -1,4 +1,4 @@
-package it.uniroma2.alessandrolioi;
+package it.uniroma2.alessandrolioi.apps;
 
 import it.uniroma2.alessandrolioi.dataset.DatasetBuilder;
 import it.uniroma2.alessandrolioi.git.Git;
@@ -8,8 +8,8 @@ import it.uniroma2.alessandrolioi.jira.Jira;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class App {
-    static final Logger logger = Logger.getLogger("Main");
+public class CsvGenerator {
+    private static final Logger logger = Logger.getLogger("CsvGenerator");
 
     public static void main(String[] args) {
         String project = "bookkeeper";
@@ -23,27 +23,27 @@ public class App {
 
             git = new Git(project, "https://github.com/apache/%s".formatted(project), "master");
 
-            logger.log(Level.INFO, "Loading integration between Jira and Git");
+            logger.info("Loading integration between Jira and Git");
             JiraGitIntegration integration = new JiraGitIntegration(git.getCommits());
             integration.findRevisions(bookkeeper.getVersions());
             git.loadClassesOfRevisions(integration.revisions().values().stream().toList());
-            logger.log(Level.INFO, "Loading integration between Jira and Git");
-            logger.log(Level.INFO, "Creating dataset");
+            logger.info("Loading integration between Jira and Git");
+            logger.info("Creating dataset");
             DatasetBuilder dataset = new DatasetBuilder(integration, git);
             dataset.applyMetrics();
             for (int i = 1; i <= bookkeeper.getVersions().size(); i++) {
                 String outputName = "%sDataset%d.csv".formatted(project, i);
                 dataset.setBuggy(i);
                 dataset.writeToFile(outputName, i);
-                logger.log(Level.INFO, "Dataset successfully created (%s)".formatted(outputName));
+                logger.info("Dataset successfully created (%s)".formatted(outputName));
             }
         } catch (Exception e) {
-            logger.log(Level.SEVERE, e.getMessage());
+            logger.severe(e.getMessage());
         } finally {
             if (git != null) {
                 boolean cleaned = git.close();
                 if (!cleaned)
-                    logger.log(Level.SEVERE, "Could not clean git repository for %s".formatted(project));
+                    logger.severe("Could not clean git repository for %s".formatted(project));
             }
         }
     }
