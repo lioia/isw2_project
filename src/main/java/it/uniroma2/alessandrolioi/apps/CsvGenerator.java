@@ -7,7 +7,7 @@ import it.uniroma2.alessandrolioi.jira.Jira;
 
 import java.util.logging.Logger;
 
-public class CsvGenerator {
+public class  CsvGenerator {
     private static final Logger logger = Logger.getLogger("CsvGenerator");
 
     public static void main(String[] args) {
