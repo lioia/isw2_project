@@ -5,7 +5,6 @@ import it.uniroma2.alessandrolioi.git.Git;
 import it.uniroma2.alessandrolioi.integration.JiraGitIntegration;
 import it.uniroma2.alessandrolioi.jira.Jira;
 
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class CsvGenerator {

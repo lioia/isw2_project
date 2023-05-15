@@ -8,7 +8,6 @@ import it.uniroma2.alessandrolioi.jira.models.JiraIssue;
 import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Jira {
