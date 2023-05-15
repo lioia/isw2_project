@@ -10,7 +10,7 @@ public class CsvAnalysis {
 
     public static void main(String[] args) {
         try {
-            Analysis analysis = new Analysis("bookkeeperDataset6r.csv");
+            Analysis analysis = new Analysis("bookkeeperDataset6.csv");
             var entries = analysis.entries();
             entries.keySet().forEach(version -> logger.info("%d, %d%n".formatted(version, entries.get(version).size())));
         } catch (CsvException e) {
