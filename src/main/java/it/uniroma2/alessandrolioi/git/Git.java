@@ -25,26 +25,26 @@ public class Git {
 
     // Remote Repository
     public Git(String project, String url, String branch) throws GitRepoException, GitLogException {
-        logger.log(Level.INFO, "Cloning remote repository (this might take a while)...");
+        logger.info("Cloning remote repository (this might take a while)...");
         GitRepoController repoController = new GitRepoController();
         GitCommitController commitController = new GitCommitController();
 
         this.folder = new File(project);
         this.repository = repoController.cloneRemote(folder, url, branch);
         this.commits = commitController.getCommits(repository);
-        logger.log(Level.INFO, "Repository successfully cloned");
+        logger.info("Repository successfully cloned");
     }
 
     // Local Repository
     public Git(String folderPath) throws GitRepoException, GitLogException {
-        logger.log(Level.INFO, "Loading local repository");
+        logger.info("Loading local repository");
         GitRepoController repoController = new GitRepoController();
         GitCommitController commitController = new GitCommitController();
 
         this.folder = new File(folderPath);
         this.repository = repoController.loadLocal(folder);
         this.commits = commitController.getCommits(repository);
-        logger.log(Level.INFO, "Repository successfully loaded");
+        logger.info("Repository successfully loaded");
     }
 
     public boolean close() {
