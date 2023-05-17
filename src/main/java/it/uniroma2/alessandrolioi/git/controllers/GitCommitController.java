@@ -1,30 +1,20 @@
 package it.uniroma2.alessandrolioi.git.controllers;
 
-import it.uniroma2.alessandrolioi.git.exceptions.GitDiffException;
 import it.uniroma2.alessandrolioi.git.exceptions.GitFileException;
 import it.uniroma2.alessandrolioi.git.exceptions.GitLogException;
 import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
-import it.uniroma2.alessandrolioi.git.models.GitDiffEntry;
-import it.uniroma2.alessandrolioi.common.Pair;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.NoHeadException;
-import org.eclipse.jgit.diff.DiffEntry;
-import org.eclipse.jgit.diff.DiffFormatter;
-import org.eclipse.jgit.diff.Edit;
-import org.eclipse.jgit.diff.EditList;
 import org.eclipse.jgit.errors.AmbiguousObjectException;
 import org.eclipse.jgit.errors.CorruptObjectException;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.lib.*;
-import org.eclipse.jgit.patch.FileHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.treewalk.TreeWalk;
-import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.eclipse.jgit.treewalk.filter.PathSuffixFilter;
-import org.eclipse.jgit.util.io.DisabledOutputStream;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -32,9 +22,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 public class GitCommitController {
-    private static final String LOAD_EXCEPTION_MESSAGE = "Could not load commits";
-    private static final String MISSING_EXCEPTION_MESSAGE = "Missing entry";
-
     public List<GitCommitEntry> getCommits(Repository repository) throws GitLogException {
         List<GitCommitEntry> entries = new ArrayList<>();
         try (Git git = new Git(repository)) {
@@ -100,9 +87,9 @@ public class GitCommitController {
             git.log().addRange(firstId, secondId).addPath(path).call().iterator().forEachRemaining(c -> entries.add(commitFromRevCommit(c)));
             return entries;
         } catch (MissingObjectException e) {
-            throw new GitLogException(MISSING_EXCEPTION_MESSAGE, e);
+            throw new GitLogException("Missing entry", e);
         } catch (IOException e) {
-            throw new GitLogException(LOAD_EXCEPTION_MESSAGE, e);
+            throw new GitLogException("Could not load commits", e);
         } catch (NoHeadException e) {
             throw new GitLogException("Could not find HEAD", e);
         } catch (GitAPIException e) {
@@ -110,85 +97,12 @@ public class GitCommitController {
         }
     }
 
-    public List<GitDiffEntry> getAllDifferencesOfClass(Repository repository, GitCommitEntry first, GitCommitEntry second, String path) throws GitDiffException, GitLogException {
-        try (DiffFormatter diffFormatter = new DiffFormatter(DisabledOutputStream.INSTANCE)) {
-            diffFormatter.setRepository(repository);
-            diffFormatter.setPathFilter(PathFilter.create(path));
-            List<GitDiffEntry> diffEntries = new ArrayList<>();
-            List<GitCommitEntry> commitsInBetween = getAllCommitsOfClass(repository, first, second, path);
-            if (commitsInBetween.isEmpty()) return diffEntries;
-            GitCommitEntry previous = commitsInBetween.get(0);
-            for (int i = 1; i < commitsInBetween.size(); i++) {
-                GitCommitEntry current = commitsInBetween.get(i);
-                List<DiffEntry> diffs = diffFormatter.scan(previous.tree(), current.tree());
-                for (DiffEntry diff : diffs) {
-                    FileHeader header = diffFormatter.toFileHeader(diff);
-                    Pair<Integer, Integer> addedAndDeleted = calculateAddedAndDeleted(header.toEditList());
-                    GitDiffEntry entry = new GitDiffEntry(diff, addedAndDeleted.first(), addedAndDeleted.second());
-                    diffEntries.add(entry);
-                }
-            }
-            return diffEntries;
-        } catch (CorruptObjectException e) {
-            throw new GitDiffException("Corrupt entry", e);
-        } catch (MissingObjectException e) {
-            throw new GitDiffException(MISSING_EXCEPTION_MESSAGE, e);
-        } catch (IOException e) {
-            throw new GitDiffException(LOAD_EXCEPTION_MESSAGE, e);
-        }
-    }
-
-    public Map<String, GitDiffEntry> getDifferences(Repository repository, GitCommitEntry first, GitCommitEntry second) throws GitDiffException {
-        // Create a formatter disabling output
-        try (DiffFormatter diffFormatter = new DiffFormatter(DisabledOutputStream.INSTANCE)) {
-            // Set current repository
-            diffFormatter.setRepository(repository);
-            // Exclude non-java files
-            diffFormatter.setPathFilter(PathSuffixFilter.create(".java"));
-            // Get diffs between `first` and `second` commits
-            List<DiffEntry> diffs = diffFormatter.scan(first.tree(), second.tree());
-            // List of computed differences
-            Map<String, GitDiffEntry> differences = new HashMap<>();
-            for (DiffEntry diff : diffs) {
-                FileHeader header = diffFormatter.toFileHeader(diff);
-                Pair<Integer, Integer> addedAndDeleted = calculateAddedAndDeleted(header.toEditList());
-                String path = diff.getNewPath();
-                GitDiffEntry entry = new GitDiffEntry(diff, addedAndDeleted.first(), addedAndDeleted.second());
-                differences.put(path, entry);
-            }
-            return differences;
-        } catch (CorruptObjectException e) {
-            throw new GitDiffException("Corrupt entry", e);
-        } catch (MissingObjectException e) {
-            throw new GitDiffException(MISSING_EXCEPTION_MESSAGE, e);
-        } catch (IOException e) {
-            throw new GitDiffException(LOAD_EXCEPTION_MESSAGE, e);
-        }
-    }
-
-    // Calculate added and deleted lines based on the edit list
-    private Pair<Integer, Integer> calculateAddedAndDeleted(EditList list) {
-        int added = 0;
-        int deleted = 0;
-        for (Edit edit : list) {
-            int lengthDifference = edit.getLengthB() - edit.getLengthA();
-            if (edit.getType() == Edit.Type.INSERT)
-                added += lengthDifference;
-            else if (edit.getType() == Edit.Type.DELETE)
-                deleted -= lengthDifference;
-            else if (edit.getType() == Edit.Type.REPLACE) {
-                if (lengthDifference > 0) added += lengthDifference;
-                else if (lengthDifference < 0) deleted += lengthDifference;
-            }
-        }
-        return new Pair<>(added, deleted);
-    }
-
     private GitCommitEntry commitFromRevCommit(RevCommit commit) {
         String hash = commit.getName();
         String message = commit.getShortMessage();
         LocalDateTime date = LocalDateTime.ofInstant(commit.getCommitterIdent().getWhenAsInstant(), commit.getCommitterIdent().getZoneId());
         RevTree tree = commit.getTree();
-        return new GitCommitEntry(hash, message, date, tree);
+        List<RevTree> parents = Arrays.stream(commit.getParents()).map(RevCommit::getTree).toList();
+        return new GitCommitEntry(hash, message, date, tree, parents);
     }
 }

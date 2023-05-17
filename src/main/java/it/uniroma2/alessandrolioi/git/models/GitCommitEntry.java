@@ -12,12 +12,14 @@ public final class GitCommitEntry {
     private final LocalDateTime commitDate;
     private List<String> classList;
     private final RevTree tree;
+    private final List<RevTree> parents;
 
-    public GitCommitEntry(String hash, String message, LocalDateTime commitDate, RevTree tree) {
+    public GitCommitEntry(String hash, String message, LocalDateTime commitDate, RevTree tree, List<RevTree> parents) {
         this.hash = hash;
         this.message = message;
         this.commitDate = commitDate;
         this.tree = tree;
+        this.parents = parents;
 
         this.classList = new ArrayList<>();
     }
@@ -44,5 +46,9 @@ public final class GitCommitEntry {
 
     public RevTree tree() {
         return tree;
+    }
+
+    public List<RevTree> parents() {
+        return parents;
     }
 }

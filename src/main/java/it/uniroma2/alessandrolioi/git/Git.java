@@ -1,6 +1,7 @@
 package it.uniroma2.alessandrolioi.git;
 
 import it.uniroma2.alessandrolioi.git.controllers.GitCommitController;
+import it.uniroma2.alessandrolioi.git.controllers.GitDiffController;
 import it.uniroma2.alessandrolioi.git.controllers.GitRepoController;
 import it.uniroma2.alessandrolioi.git.exceptions.GitDiffException;
 import it.uniroma2.alessandrolioi.git.exceptions.GitFileException;
@@ -59,13 +60,15 @@ public class Git {
     }
 
     public Map<String, GitDiffEntry> getDifferences(GitCommitEntry first, GitCommitEntry second) throws GitDiffException {
-        GitCommitController controller = new GitCommitController();
+        GitDiffController controller = new GitDiffController();
         return controller.getDifferences(repository, first, second);
     }
 
     public List<GitDiffEntry> getAllDifferencesOfClass(GitCommitEntry first, GitCommitEntry second, String aClass) throws GitDiffException, GitLogException {
-        GitCommitController controller = new GitCommitController();
-        return controller.getAllDifferencesOfClass(repository, first, second, aClass);
+        GitCommitController commitController = new GitCommitController();
+        GitDiffController diffController = new GitDiffController();
+        List<GitCommitEntry> commitsInBetween = commitController.getAllCommitsOfClass(repository, first, second, aClass);
+        return diffController.getAllDifferencesOfClass(repository, commitsInBetween, aClass);
     }
 
     public String getContentsOfClass(GitCommitEntry commit, String filePath) throws GitFileException {
@@ -73,10 +76,14 @@ public class Git {
         return controller.getContentsOfFile(repository, commit, filePath);
     }
 
-    public void loadClassesOfRevisions(List<GitCommitEntry> values) throws GitLogException {
+    public void loadClassesOfRevision(GitCommitEntry version) throws GitLogException {
         GitCommitController controller = new GitCommitController();
-        for (GitCommitEntry commit : values)
-            commit.setClassList(controller.getClassList(repository, commit.tree()));
+        version.setClassList(controller.getClassList(repository, version.tree()));
+    }
+
+    public List<String> getModifiedClassesOfCommit(GitCommitEntry commit) throws GitDiffException {
+        GitDiffController controller = new GitDiffController();
+        return controller.getModifiedClassesOfCommit(repository, commit);
     }
 
     public List<GitCommitEntry> getCommits() {

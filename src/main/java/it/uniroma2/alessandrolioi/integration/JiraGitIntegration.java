@@ -1,5 +1,6 @@
 package it.uniroma2.alessandrolioi.integration;
 
+import it.uniroma2.alessandrolioi.common.Pair;
 import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
 import it.uniroma2.alessandrolioi.integration.controllers.FilterController;
 import it.uniroma2.alessandrolioi.integration.exceptions.NotFoundException;
@@ -10,21 +11,24 @@ import java.util.*;
 
 public class JiraGitIntegration {
     private final List<GitCommitEntry> commits;
-    private final Map<JiraVersion, GitCommitEntry> revisions;
+    private final List<Pair<JiraVersion, GitCommitEntry>> versions;
     private final Map<JiraIssue, GitCommitEntry> issues;
 
     public JiraGitIntegration(List<GitCommitEntry> commits) {
         this.commits = commits;
-        this.revisions = new HashMap<>();
+        this.versions = new ArrayList<>();
         this.issues = new HashMap<>();
     }
 
     public void findRevisions(List<JiraVersion> versions) throws NotFoundException {
         for (JiraVersion version : versions) {
-            revisions.put(version, findRevisionOfVersion(version));
+            GitCommitEntry revisionVersion = findRevisionOfVersion(version);
+            this.versions.add(new Pair<>(version, revisionVersion));
 
-            for (JiraIssue issue : version.fixed())
-                issues.put(issue, findRevisionOfIssue(issue));
+            for (JiraIssue issue : version.fixed()) {
+                GitCommitEntry revisionIssue = findRevisionOfIssue(issue);
+                this.issues.put(issue, revisionIssue);
+            }
         }
     }
 
@@ -50,8 +54,8 @@ public class JiraGitIntegration {
         return candidate;
     }
 
-    public Map<JiraVersion, GitCommitEntry> revisions() {
-        return revisions;
+    public List<Pair<JiraVersion, GitCommitEntry>> versions() {
+        return versions;
     }
 
     public Map<JiraIssue, GitCommitEntry> issues() {
