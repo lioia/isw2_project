@@ -1,15 +1,20 @@
 package it.uniroma2.alessandrolioi.dataset.controllers;
 
+import it.uniroma2.alessandrolioi.common.Pair;
 import it.uniroma2.alessandrolioi.dataset.exceptions.MetricException;
-import it.uniroma2.alessandrolioi.dataset.models.DatasetEntry;
-import it.uniroma2.alessandrolioi.dataset.models.RevisionPairInfo;
+import it.uniroma2.alessandrolioi.dataset.models.MetricValue;
 import it.uniroma2.alessandrolioi.git.Git;
 import it.uniroma2.alessandrolioi.git.exceptions.GitDiffException;
 import it.uniroma2.alessandrolioi.git.exceptions.GitFileException;
 import it.uniroma2.alessandrolioi.git.exceptions.GitLogException;
 import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
 import it.uniroma2.alessandrolioi.git.models.GitDiffEntry;
+import it.uniroma2.alessandrolioi.jira.models.JiraIssue;
+import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -17,18 +22,20 @@ import java.util.function.Function;
 
 public class MetricController {
 
-    public void applyLOCMetric(String metric, Git git, List<GitCommitEntry> revisions, Map<String, List<DatasetEntry>> entries) throws MetricException {
+    public void applyLOCMetric(Git git, List<Pair<JiraVersion, GitCommitEntry>> versions,
+                               Function<MetricValue, Void> func) throws MetricException {
         try {
             // For every revision
-            for (int i = 0; i < revisions.size(); i++) {
-                GitCommitEntry revision = revisions.get(i);
+            for (int i = 0; i < versions.size(); i++) {
+                GitCommitEntry revision = versions.get(i).second();
 
                 // For every class
                 for (String aClass : revision.classList()) {
                     // Calculate the LOC of a file calculating the number of lines
                     String contents = git.getContentsOfClass(revision, aClass);
                     int loc = contents.split("\n").length;
-                    entries.get(aClass).get(i).metrics().put(metric, Integer.toString(loc));
+                    MetricValue value = new MetricValue(aClass, i, "LOC", loc);
+                    func.apply(value);
                 }
             }
         } catch (GitFileException e) {
@@ -36,13 +43,14 @@ public class MetricController {
         }
     }
 
-    public void applyDifferenceMetric(Git git, List<GitCommitEntry> revisions, Map<String, List<DatasetEntry>> entries) throws MetricException {
+    public void applyDifferenceMetric(Git git, List<Pair<JiraVersion, GitCommitEntry>> versions,
+                                      Function<MetricValue, Void> func) throws MetricException {
         try {
             // For every pair of consecutive releases
-            GitCommitEntry previous = revisions.get(0);
+            GitCommitEntry previous = versions.get(0).second();
             // For every consecutive pair of classes
-            for (int i = 1; i < revisions.size(); i++) {
-                GitCommitEntry current = revisions.get(i);
+            for (int i = 1; i < versions.size(); i++) {
+                GitCommitEntry current = versions.get(i).second();
                 // Get the differences between commits
                 Map<String, GitDiffEntry> diffs = git.getDifferences(previous, current);
 
@@ -57,8 +65,10 @@ public class MetricController {
                         locTouched = diff.touched();
                         churn = diff.churn();
                     }
-                    entries.get(aClass).get(i).metrics().put("LOC Touched", String.valueOf(locTouched));
-                    entries.get(aClass).get(i).metrics().put("Churn", String.valueOf(churn));
+                    MetricValue locTouchedMetric = new MetricValue(aClass, i, "LOC Touched", locTouched);
+                    MetricValue churnMetric = new MetricValue(aClass, i, "Churn", churn);
+                    func.apply(locTouchedMetric);
+                    func.apply(churnMetric);
                 }
 
                 // Set previous version as the current for the next iteration
@@ -69,13 +79,14 @@ public class MetricController {
         }
     }
 
-    public void applyCumulativeMetric(Git git, List<GitCommitEntry> revisions, Map<String, List<DatasetEntry>> entries) throws MetricException {
+    public void applyCumulativeMetric(Git git, List<Pair<JiraVersion, GitCommitEntry>> versions,
+                                      Function<MetricValue, Void> func) throws MetricException {
         try {
-            GitCommitEntry previous = revisions.get(0);
+            GitCommitEntry previous = versions.get(0).second();
 
             // For every consecutive pair of versions
-            for (int i = 1; i < revisions.size(); i++) {
-                GitCommitEntry current = revisions.get(i);
+            for (int i = 1; i < versions.size(); i++) {
+                GitCommitEntry current = versions.get(i).second();
                 // For every class
                 for (String aClass : current.classList()) {
                     // Get all the incremental differences of the class between the releases
@@ -85,16 +96,20 @@ public class MetricController {
                     if (diffs.isEmpty()) size = 1;
                     // Calculating the max LOC added
                     int maxLocAdded = diffs.stream().map(GitDiffEntry::added).max(Comparator.naturalOrder()).orElse(0);
-                    entries.get(aClass).get(i).metrics().put("Max LOC Added", String.valueOf(maxLocAdded));
+                    MetricValue maxLocAddedMetric = new MetricValue(aClass, i, "Max LOC Added", maxLocAdded);
+                    func.apply(maxLocAddedMetric);
                     // Calculating the max Churn
                     int maxChurn = diffs.stream().map(GitDiffEntry::churn).max(Comparator.naturalOrder()).orElse(0);
-                    entries.get(aClass).get(i).metrics().put("Max Churn", String.valueOf(maxChurn));
+                    MetricValue maxChurnMetric = new MetricValue(aClass, i, "Max Churn", maxChurn);
+                    func.apply(maxChurnMetric);
                     // Calculating the sum of all the LOC added
                     int sumLocAdded = diffs.stream().map(GitDiffEntry::added).reduce(Integer::sum).orElse(0);
-                    entries.get(aClass).get(i).metrics().put("Average LOC Added", String.valueOf(sumLocAdded / size));
+                    MetricValue averageLocAddedMetric = new MetricValue(aClass, i, "Average LOC Added", sumLocAdded / size);
+                    func.apply(averageLocAddedMetric);
                     // Calculating the sum of all Churn
                     int sumChurn = diffs.stream().map(GitDiffEntry::churn).reduce(Integer::sum).orElse(0);
-                    entries.get(aClass).get(i).metrics().put("Average Churn", String.valueOf(sumChurn / size));
+                    MetricValue averageChurnMetric = new MetricValue(aClass, i, "Average Churn", sumChurn / size);
+                    func.apply(averageChurnMetric);
                 }
                 // Set previous version as the current for the next iteration
                 previous = current;
@@ -104,25 +119,55 @@ public class MetricController {
         }
     }
 
-    public void applyListMetric(Git git, List<GitCommitEntry> revisions, Function<RevisionPairInfo, Void> func) throws MetricException {
+    public void applyListMetric(Git git, List<Pair<JiraVersion, GitCommitEntry>> versions,
+                                Map<JiraIssue, GitCommitEntry> issues,
+                                Function<MetricValue, Void> func) throws MetricException {
         try {
-            GitCommitEntry previous = revisions.get(0);
+            GitCommitEntry previous = versions.get(0).second();
             // For every consecutive pair of versions
-            for (int i = 1; i < revisions.size(); i++) {
-                GitCommitEntry current = revisions.get(i);
+            for (int i = 1; i < versions.size(); i++) {
+                Pair<JiraVersion, GitCommitEntry> current = versions.get(i);
                 // For every class
-                for (String aClass : current.classList()) {
+                for (String aClass : current.second().classList()) {
                     // Get every commit between two releases
-                    List<GitCommitEntry> commits = git.getAllCommitsOfClass(previous, current, aClass);
-                    RevisionPairInfo info = new RevisionPairInfo(previous, current, i, aClass, commits);
-                    // Apply a function
-                    func.apply(info);
+                    List<GitCommitEntry> commits = git.getAllCommitsOfClass(previous, current.second(), aClass);
+                    MetricValue nrMetric = new MetricValue(aClass, i, "NR", commits.size());
+                    func.apply(nrMetric);
+
+                    // Age: calculated as ((lastCommitTime - firstCommitTime) / (currentReleaseTime - lastReleaseTime))
+                    List<LocalDateTime> commitDates = new ArrayList<>(commits.stream().map(GitCommitEntry::commitDate).toList());
+                    commitDates.addAll(List.of(previous.commitDate(), current.second().commitDate()));
+                    double age = calculateAge(previous.commitDate(), current.second().commitDate(), commitDates);
+                    MetricValue ageMetric = new MetricValue(aClass, i, "Age", age);
+                    func.apply(ageMetric);
+
+                    // NFix
+                    List<String> hashes = new ArrayList<>(commits.stream().map(GitCommitEntry::hash).toList());
+                    hashes.addAll(List.of(previous.hash(), current.second().hash()));
+                    long nFix = current.first().fixed().stream()
+                            .filter(issue -> hashes.contains(issues.get(issue).hash())) // Fixed issues contained in this commit range
+                            .count();
+                    MetricValue nFixMetric = new MetricValue(aClass, i, "NFix", nFix);
+                    func.apply(nFixMetric);
                 }
                 // Set previous version as the current for the next iteration
-                previous = current;
+                previous = current.second();
             }
         } catch (GitLogException e) {
             throw new MetricException(e);
         }
+    }
+
+    private double calculateAge(LocalDateTime previousVersion, LocalDateTime currentVersion, List<LocalDateTime> commits) {
+        double age = 0.0;
+        if (!commits.isEmpty()) {
+            commits.sort(Comparator.naturalOrder());
+            LocalDateTime first = commits.get(0);
+            LocalDateTime last = commits.get(commits.size() - 1);
+            double totalTime = (double) previousVersion.toEpochSecond(ZoneOffset.UTC) - currentVersion.toEpochSecond(ZoneOffset.UTC);
+            double time = (double) last.toEpochSecond(ZoneOffset.UTC) - first.toEpochSecond(ZoneOffset.UTC);
+            age = Math.abs(time / totalTime);
+        }
+        return age;
     }
 }
