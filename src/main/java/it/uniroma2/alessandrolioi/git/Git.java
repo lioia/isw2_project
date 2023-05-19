@@ -54,6 +54,11 @@ public class Git {
         return controller.recurseClean(folder);
     }
 
+    public GitCommitEntry getFirstCommit() throws GitLogException {
+        GitCommitController controller = new GitCommitController();
+        return controller.getFirstCommit(repository);
+    }
+
     public List<GitCommitEntry> getAllCommitsOfClass(GitCommitEntry first, GitCommitEntry second, String aClass) throws GitLogException {
         GitCommitController controller = new GitCommitController();
         return controller.getAllCommitsOfClass(repository, first, second, aClass);

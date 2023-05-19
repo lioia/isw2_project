@@ -14,20 +14,20 @@ public class CsvGenerator {
     private static final Logger logger = Logger.getLogger("CsvGenerator");
 
     public static void main(String[] args) {
-        String project = "bookkeeper";
+        String project = "avro";
         String coldStartProject = "avro";
         Git git = null;
         try {
-            Jira bookkeeper = new Jira(project);
-            Jira avro = new Jira(coldStartProject);
-            double coldStart = avro.calculateColdStart();
-            bookkeeper.applyProportion(coldStart);
+            Jira jiraProject = new Jira(project);
+            Jira jiraColdStartProject = new Jira(coldStartProject);
+            double coldStart = jiraColdStartProject.calculateColdStart();
+            jiraProject.applyProportion(coldStart);
 
             git = new Git(project, "https://github.com/apache/%s".formatted(project), "master");
 
             logger.info("Loading integration between Jira and Git");
             JiraGitIntegration integration = new JiraGitIntegration(git.getCommits());
-            integration.findRevisions(bookkeeper.getVersions());
+            integration.findRevisions(jiraProject.getVersions());
 
             for (Pair<JiraVersion, GitCommitEntry> version : integration.versions())
                 git.loadClassesOfRevision(version.second());
@@ -35,7 +35,7 @@ public class CsvGenerator {
             logger.info("Creating dataset");
             DatasetBuilder dataset = new DatasetBuilder(integration, git);
             dataset.applyMetrics();
-            for (int i = 1; i <= bookkeeper.getVersions().size(); i++) {
+            for (int i = 1; i <= jiraProject.getVersions().size(); i++) {
                 String outputName = "%sDataset%d.csv".formatted(project, i);
                 dataset.setBuggy(i);
                 dataset.writeToFile(outputName, i);
