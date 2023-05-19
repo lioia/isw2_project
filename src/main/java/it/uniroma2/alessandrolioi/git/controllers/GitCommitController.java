@@ -12,7 +12,9 @@ import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevSort;
 import org.eclipse.jgit.revwalk.RevTree;
+import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathSuffixFilter;
 
@@ -22,6 +24,21 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 public class GitCommitController {
+    public GitCommitEntry getFirstCommit(Repository repository) throws GitLogException {
+        try {
+            RevWalk walk = new RevWalk(repository);
+            ObjectId head = repository.resolve(Constants.HEAD);
+            RevCommit root = walk.parseCommit(head);
+            walk.sort(RevSort.REVERSE);
+            walk.markStart(root);
+            return commitFromRevCommit(walk.next());
+        } catch (AmbiguousObjectException | IncorrectObjectTypeException e) {
+            throw new GitLogException("Not a commit", e);
+        } catch (IOException e) {
+            throw new GitLogException("IO failure. Could not access refs", e);
+        }
+    }
+
     public List<GitCommitEntry> getCommits(Repository repository) throws GitLogException {
         List<GitCommitEntry> entries = new ArrayList<>();
         try (Git git = new Git(repository)) {
