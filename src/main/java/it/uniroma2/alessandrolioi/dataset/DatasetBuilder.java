@@ -27,12 +27,9 @@ public class DatasetBuilder {
 
     // Maps class name to its metrics. i-th element in the list is the entry for the i-th version
     private final Map<String, List<DatasetEntry>> entries;
-    // Metrics used in dataset
-    private final List<String> metrics;
 
     public DatasetBuilder(JiraGitIntegration integration, Git git) {
         this.git = git;
-        this.metrics = new ArrayList<>();
         this.entries = new HashMap<>();
         this.issues = integration.issues();
         this.versions = integration.versions();
@@ -51,85 +48,33 @@ public class DatasetBuilder {
         }
     }
 
-    private void applyLOCMetric() throws MetricException {
+    public void applyMetrics() throws MetricException {
         MetricController controller = new MetricController();
         controller.applyLOCMetric(git, versions, this::applyMetric);
-        metrics.add("LOC");
-    }
-
-    // LOC Touched, Churn
-    private void applyDifferenceMetrics() throws MetricException {
-        // Initialize first release
-        for (String aClass : versions.get(0).second().classList()) {
-            for (DatasetEntry entry : entries.get(aClass)) {
-                entry.metrics().put("LOC Touched", "0");
-                entry.metrics().put("Churn", "0");
-            }
-        }
-        MetricController controller = new MetricController();
         controller.applyDifferenceMetric(git, versions, this::applyMetric);
-        metrics.addAll(List.of("LOC Touched", "Churn"));
-    }
-
-    // Average LOC Added, Max LOC Added, Average Churn, Max Churn
-    private void applyCumulativeMetrics() throws MetricException {
-        // Initialize first release
-        for (String aClass : versions.get(0).second().classList()) {
-            for (DatasetEntry entry : entries.get(aClass)) {
-                entry.metrics().put("Average LOC Added", "0");
-                entry.metrics().put("Max LOC Added", "0");
-                entry.metrics().put("Average Churn", "0");
-                entry.metrics().put("Max Churn", "0");
-            }
-        }
-        MetricController controller = new MetricController();
         controller.applyCumulativeMetric(git, versions, this::applyMetric);
-        metrics.addAll(List.of("Average LOC Added", "Max LOC Added", "Average Churn", "Max Churn"));
-    }
-
-    // NR and Age
-    public void applyListMetrics() throws MetricException {
-        // Initialize first release
-        for (String aClass : versions.get(0).second().classList()) {
-            for (DatasetEntry entry : entries.get(aClass)) {
-                entry.metrics().put("NR", "0");
-                entry.metrics().put("Age", "0");
-                entry.metrics().put("NFix", "0");
-            }
-        }
-        MetricController controller = new MetricController();
         controller.applyListMetric(git, versions, issues, this::applyMetric);
-        metrics.addAll(List.of("NR", "Age", "NFix"));
     }
 
     public void setBuggy(int lastVersion) throws BuggyException {
         BuggyController controller = new BuggyController();
-        List<Pair<JiraVersion, GitCommitEntry>> subList = versions.subList(0, lastVersion); // maybe + 1
+        List<Pair<JiraVersion, GitCommitEntry>> subList = versions.subList(0, lastVersion);
         controller.calculateBuggy(git, subList, issues, buggy -> {
             buggy.first().stream().filter(entries::containsKey).forEach(aClass -> {
-                for (int version : buggy.second()) {
+                for (int version : buggy.second())
                     entries.get(aClass).get(version).setBuggy(true);
-                }
             });
             return null;
         });
     }
 
-    public void applyMetrics() throws MetricException {
-        applyLOCMetric();
-        applyDifferenceMetrics();
-        applyCumulativeMetrics();
-        applyListMetrics();
-    }
-
-    public void writeToFile(String output, int numberOfVersions) throws DatasetWriterException {
+    public void writeToFile(String project, int numberOfVersions) throws DatasetWriterException {
         WriterController controller = new WriterController();
-        controller.writeToFile(output, versions, metrics, entries, numberOfVersions);
+        controller.writeToFile(project, versions, entries, numberOfVersions);
     }
 
     private Void applyMetric(MetricValue metric) {
-        entries
-                .get(metric.aClass())
+        entries.get(metric.aClass())
                 .get(metric.version())
                 .metrics()
                 .put(metric.metric(), String.valueOf(metric.value()));

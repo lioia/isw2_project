@@ -14,7 +14,7 @@ public class CsvGenerator {
     private static final Logger logger = Logger.getLogger("CsvGenerator");
 
     public static void main(String[] args) {
-        String project = "avro";
+        String project = "bookkeeper";
         String coldStartProject = "avro";
         Git git = null;
         try {
@@ -36,10 +36,9 @@ public class CsvGenerator {
             DatasetBuilder dataset = new DatasetBuilder(integration, git);
             dataset.applyMetrics();
             for (int i = 1; i <= jiraProject.getVersions().size(); i++) {
-                String outputName = "%sDataset%d.csv".formatted(project, i);
                 dataset.setBuggy(i);
-                dataset.writeToFile(outputName, i);
-                logger.info("Dataset successfully created (%s)".formatted(outputName));
+                dataset.writeToFile(project, i);
+                logger.info("Dataset successfully created: %s with %d release(s)".formatted(project, i));
             }
         } catch (Exception e) {
             logger.severe(e.getMessage());
