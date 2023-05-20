@@ -49,6 +49,6 @@ public class WriterController {
         List<String> metrics = new ArrayList<>();
         for (Metric value : Metric.values())
             metrics.add(entry.metrics().get(value));
-        return "%d,%s,%s,%s".formatted(version, className, String.join(",", metrics), entry.isBuggy());
+        return "%d,%s,%s,%s".formatted(version + 1, className, String.join(",", metrics), entry.isBuggy());
     }
 }
