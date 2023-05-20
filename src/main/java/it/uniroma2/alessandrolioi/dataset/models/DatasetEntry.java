@@ -1,10 +1,12 @@
 package it.uniroma2.alessandrolioi.dataset.models;
 
+import it.uniroma2.alessandrolioi.common.Metric;
+
 import java.util.HashMap;
 import java.util.Map;
 
 public final class DatasetEntry {
-    private final Map<String, String> metrics;
+    private final Map<Metric, String> metrics;
     private boolean buggy;
 
     public DatasetEntry() {
@@ -12,7 +14,7 @@ public final class DatasetEntry {
         this.buggy = false;
     }
 
-    public Map<String, String> metrics() {
+    public Map<Metric, String> metrics() {
         return metrics;
     }
 

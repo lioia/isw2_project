@@ -3,59 +3,52 @@ package it.uniroma2.alessandrolioi.dataset.controllers;
 import it.uniroma2.alessandrolioi.common.Pair;
 import it.uniroma2.alessandrolioi.dataset.exceptions.DatasetWriterException;
 import it.uniroma2.alessandrolioi.dataset.models.DatasetEntry;
+import it.uniroma2.alessandrolioi.common.Metric;
 import it.uniroma2.alessandrolioi.git.models.GitCommitEntry;
 import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 public class WriterController {
-    public void writeToFile(String output, List<Pair<JiraVersion, GitCommitEntry>> revisions, List<String> metrics,
+    public void writeToFile(String project, List<Pair<JiraVersion, GitCommitEntry>> revisions,
                             Map<String, List<DatasetEntry>> entries, int numberOfVersions) throws DatasetWriterException {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(output))) {
-            writeHeader(writer, metrics);
-            // For every release (sorted)
+        try {
+            Files.createDirectories(Paths.get("dataset", project));
+
+            String header = writeHeader();
+            List<String> values = new ArrayList<>();
             for (int i = 0; i < numberOfVersions; i++) {
-                // Get current release/revision
                 GitCommitEntry revision = revisions.get(i).second();
                 for (String aClass : revision.classList()) {
-                    DatasetEntry entry = entries.get(aClass).get(i);
-                    // Write number of release and class name
-                    writer.write("%d,%s".formatted(i + 1, aClass));
-                    // Write Metrics and Buggy
-                    writeMetrics(writer, metrics, entry);
+                    String value = writeEntry(i, aClass, entries.get(aClass).get(i));
+                    values.add(value);
                 }
             }
+            String text = "%s\n%s".formatted(header, String.join("\n", values));
+
+            Path output = Paths.get("dataset", project, "%d.csv".formatted(numberOfVersions));
+            Files.write(output, text.getBytes());
         } catch (IOException e) {
-            throw new DatasetWriterException("Could not create or load file %s".formatted(output), e);
+            throw new DatasetWriterException("", e);
         }
     }
 
-    private void writeHeader(BufferedWriter writer, List<String> metrics) throws DatasetWriterException {
-        try {
-            writer.write("Version, File Name");
-            for (String metric : metrics) writer.write(",%s".formatted(metric));
-            writer.write(",Buggy\n");
-        } catch (IOException e) {
-            throw new DatasetWriterException("Could not write header to file", e);
-        }
+    private String writeHeader() {
+        List<String> metrics = Arrays.stream(Metric.values()).map(Metric::name).toList();
+        return "Version,File_Name,%s,Buggy".formatted(String.join(",", metrics));
     }
 
-    private void writeMetrics(BufferedWriter writer, List<String> metrics, DatasetEntry entry) throws DatasetWriterException {
-        try {
-            // For every metric
-            for (String metric : metrics) {
-                String value = entry.metrics().get(metric);
-                // Write metric
-                writer.write(",%s".formatted(value));
-            }
-            // Write buggy field
-            writer.write(",%s\n".formatted(entry.isBuggy()));
-        } catch (IOException e) {
-            throw new DatasetWriterException("Could not write entry to file", e);
-        }
+    private String writeEntry(int version, String className, DatasetEntry entry) {
+        List<String> metrics = new ArrayList<>();
+        for (Metric value : Metric.values())
+            metrics.add(entry.metrics().get(value));
+        return "%d,%s,%s,%s".formatted(version, className, String.join(",", metrics), entry.isBuggy());
     }
 }
