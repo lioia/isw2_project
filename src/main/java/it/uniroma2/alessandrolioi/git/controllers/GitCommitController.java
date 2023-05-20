@@ -35,7 +35,7 @@ public class GitCommitController {
         } catch (AmbiguousObjectException | IncorrectObjectTypeException e) {
             throw new GitLogException("Not a commit", e);
         } catch (IOException e) {
-            throw new GitLogException("IO failure. Could not access refs", e);
+            throw new GitLogException(GitLogException.IO, e);
         }
     }
 
@@ -52,7 +52,7 @@ public class GitCommitController {
         } catch (AmbiguousObjectException | IncorrectObjectTypeException e) {
             throw new GitLogException("Not a commit", e);
         } catch (IOException e) {
-            throw new GitLogException("IO failure. Could not access refs", e);
+            throw new GitLogException(GitLogException.IO, e);
         }
 
         // Ascending order of commit date
@@ -75,7 +75,7 @@ public class GitCommitController {
 
             return classes;
         } catch (IOException e) {
-            throw new GitLogException("IO failure. Could not access refs", e);
+            throw new GitLogException(GitLogException.IO, e);
         }
     }
 
@@ -106,7 +106,7 @@ public class GitCommitController {
         } catch (MissingObjectException e) {
             throw new GitLogException("Missing entry", e);
         } catch (IOException e) {
-            throw new GitLogException("Could not load commits", e);
+            throw new GitLogException(GitLogException.IO, e);
         } catch (NoHeadException e) {
             throw new GitLogException("Could not find HEAD", e);
         } catch (GitAPIException e) {
