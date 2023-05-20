@@ -10,7 +10,7 @@ public final class DatasetEntry {
     private boolean buggy;
 
     public DatasetEntry() {
-        this.metrics = new EnumMap<>();
+        this.metrics = new EnumMap<>(Metric.class);
         this.buggy = false;
     }
 
