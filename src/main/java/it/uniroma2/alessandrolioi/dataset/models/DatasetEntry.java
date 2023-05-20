@@ -2,7 +2,7 @@ package it.uniroma2.alessandrolioi.dataset.models;
 
 import it.uniroma2.alessandrolioi.common.Metric;
 
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
 
 public final class DatasetEntry {
@@ -10,7 +10,7 @@ public final class DatasetEntry {
     private boolean buggy;
 
     public DatasetEntry() {
-        this.metrics = new HashMap<>();
+        this.metrics = new EnumMap<>();
         this.buggy = false;
     }
 
