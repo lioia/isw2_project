@@ -1,8 +1,11 @@
 package it.uniroma2.alessandrolioi.apps;
 
-import it.uniroma2.alessandrolioi.analysis.Analysis;
+import it.uniroma2.alessandrolioi.analysis.AnalysisBuilder;
 import it.uniroma2.alessandrolioi.analysis.exceptions.ArffException;
+import it.uniroma2.alessandrolioi.analysis.exceptions.ClassifierException;
 import it.uniroma2.alessandrolioi.analysis.exceptions.CsvException;
+import it.uniroma2.alessandrolioi.analysis.exceptions.EvaluationException;
+import it.uniroma2.alessandrolioi.analysis.models.AnalysisType;
 
 import java.util.logging.Logger;
 
@@ -11,9 +14,14 @@ public class CsvAnalysis {
 
     public static void main(String[] args) {
         try {
-            Analysis analysis = new Analysis("bookkeeper");
-            analysis.csvToArff(2);
-        } catch (CsvException | ArffException e) {
+            new AnalysisBuilder("bookkeeper", 2)
+                    .loadCsv()
+                    .loadInstances()
+                    .buildClasisifier(AnalysisType.Classifiers.RANDOM_FOREST)
+                    // ... apply filters ... (feature selection, sampling, cost sensitive)
+                    .evaluate();
+        } catch (CsvException | ArffException | ClassifierException | EvaluationException e) {
+            e.printStackTrace();
             logger.severe(e.getMessage());
         }
     }

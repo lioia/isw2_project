@@ -14,9 +14,10 @@ import java.nio.file.Paths;
 import java.util.*;
 
 public class ConverterController {
-    public Map<Integer, List<CsvEntry>> readCsv(String file) throws CsvException {
+    public Map<Integer, List<CsvEntry>> readCsv(String project, int lastRelease) throws CsvException {
         try {
             Map<Integer, List<CsvEntry>> entries = new HashMap<>();
+            String file = "dataset/%s/%d.csv".formatted(project, lastRelease);
             Path path = Paths.get(file);
             List<String> lines = Files.readAllLines(path);
             int version = 1;
@@ -45,14 +46,14 @@ public class ConverterController {
         }
     }
 
-    public void writeToArff(String project, Map<Integer, List<CsvEntry>> entries, int testingRelease) throws ArffException {
+    public void writeToArff(String project, Map<Integer, List<CsvEntry>> entries, int lastRelease) throws ArffException {
         List<String> attributes = Arrays.stream(Metric.values()).map(m -> "@attribute %s numeric".formatted(m.name())).toList();
-        List<String> testingData = entries.get(testingRelease).stream().map(this::entryFieldsToArff).toList();
+        List<String> testingData = entries.get(lastRelease).stream().map(this::entryFieldsToArff).toList();
         List<String> trainingData = new ArrayList<>();
-        for (int i = 1; i < testingRelease; i++)
+        for (int i = 1; i < lastRelease; i++)
             trainingData.addAll(entries.get(i).stream().map(this::entryFieldsToArff).toList());
-        String testingFile = "testing-%d.arff".formatted(testingRelease);
-        String trainingFile = "training-%d.arff".formatted(testingRelease);
+        String testingFile = "testing-%d.arff".formatted(lastRelease);
+        String trainingFile = "training-%d.arff".formatted(lastRelease);
         try {
             writeFile(testingFile, project, attributes, testingData);
             writeFile(trainingFile, project, attributes, trainingData);
@@ -61,12 +62,15 @@ public class ConverterController {
         }
     }
 
-    public Instances loadInstance(String project, String instanceType, int testingRelease) {
+    public Instances loadInstance(String project, int testingRelease, String instanceType) throws ArffException {
         try {
             String filename = "dataset/%s/%s-%d.arff".formatted(project, instanceType, testingRelease);
-            return ConverterUtils.DataSource.read(filename);
+            Instances instance = ConverterUtils.DataSource.read(filename);
+            if (instance.classIndex() == -1)
+                instance.setClassIndex(instance.numAttributes() - 1);
+            return instance;
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new ArffException("Could not load arff file", e);
         }
     }
 
@@ -75,8 +79,6 @@ public class ConverterController {
             throw new IOException("dataset folder does not exists");
         Path path = Paths.get("dataset", project, filename);
         String text = "@relation %s\n".formatted(project) +
-                "@attribute Version numeric\n" +
-                "@attribute File_Name string\n" +
                 String.join("\n", attributes) + "\n" +
                 "@attribute Buggy {true,false}\n" +
                 "@data\n" +
@@ -90,7 +92,7 @@ public class ConverterController {
             String value = entry.fields().get(field);
             orderedValues.add(value);
         }
-        return "%s,%s,".formatted(entry.version(), entry.name()) + String.join(",", orderedValues) + ",%s".formatted(entry.buggy());
+        return String.join(",", orderedValues) + ",%s".formatted(entry.buggy());
     }
 
     private CsvEntry readEntry(String line) {
