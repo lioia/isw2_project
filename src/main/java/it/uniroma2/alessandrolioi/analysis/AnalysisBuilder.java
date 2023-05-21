@@ -7,6 +7,7 @@ import it.uniroma2.alessandrolioi.analysis.exceptions.CsvException;
 import it.uniroma2.alessandrolioi.analysis.exceptions.EvaluationException;
 import it.uniroma2.alessandrolioi.analysis.models.AnalysisType;
 import it.uniroma2.alessandrolioi.analysis.models.CsvEntry;
+import it.uniroma2.alessandrolioi.analysis.models.Report;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.bayes.NaiveBayes;
@@ -42,7 +43,7 @@ public class AnalysisBuilder {
         return this;
     }
 
-    public AnalysisBuilder buildClasisifier(AnalysisType.Classifiers classifierType) throws ClassifierException {
+    public AnalysisBuilder buildClassifier(AnalysisType.Classifiers classifierType) throws ClassifierException {
         switch (classifierType) {
             case RANDOM_FOREST -> classifier = new RandomForest();
             case NAIVE_BAYES -> classifier = new NaiveBayes();
@@ -56,13 +57,16 @@ public class AnalysisBuilder {
         }
     }
 
-    // TODO generate and return report
-    public AnalysisBuilder evaluate() throws EvaluationException {
+    public Report generateReport() throws EvaluationException {
         try {
             Evaluation evaluation = new Evaluation(training);
             evaluation.evaluateModel(classifier, testing);
-            System.out.println(evaluation.toSummaryString());
-            return this;
+            return new Report(
+                    AnalysisType.Classifiers.fromClassifier(classifier),
+                    evaluation.weightedPrecision(),
+                    evaluation.weightedRecall(),
+                    evaluation.weightedAreaUnderROC(),
+                    evaluation.kappa());
         } catch (Exception e) {
             throw new EvaluationException("Could not evaluate classifier", e);
         }
