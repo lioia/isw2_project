@@ -5,12 +5,16 @@ import it.uniroma2.alessandrolioi.analysis.exceptions.*;
 import it.uniroma2.alessandrolioi.analysis.models.AnalysisType;
 import it.uniroma2.alessandrolioi.analysis.models.CsvEntry;
 import it.uniroma2.alessandrolioi.analysis.models.Report;
+import weka.attributeSelection.BestFirst;
+import weka.attributeSelection.CfsSubsetEval;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.lazy.IBk;
 import weka.classifiers.trees.RandomForest;
 import weka.core.Instances;
+import weka.filters.Filter;
+import weka.filters.supervised.attribute.AttributeSelection;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,17 +35,18 @@ public class Analysis {
         loadInstances();
     }
 
-    public List<Report> performAnalysis() throws ClassifierException, EvaluationException {
+    public List<Report> performAnalysis() throws ClassifierException, EvaluationException, FeatureSelectionException {
         List<Report> reports = new ArrayList<>();
         for (AnalysisType.Classifiers classifierType : AnalysisType.Classifiers.values()) {
-            this.buildClassifier(classifierType);
+            selectClassifier(classifierType);
             for (AnalysisType.FeatureSelection featureSelection : AnalysisType.FeatureSelection.values()) {
-//                        this.applyFeatureSelection(featureSelection);
+                applyFeatureSelection(featureSelection);
                 for (AnalysisType.Sampling sampling : AnalysisType.Sampling.values()) {
-//                            this.applySampling(sampling);
+                    applySampling(sampling);
                     for (AnalysisType.CostSensitive costSensitive : AnalysisType.CostSensitive.values()) {
-                        Report report = this.generateReport();
-                        report.setProperties(classifierType, featureSelection, sampling, costSensitive);
+                        applyCostSensitive(costSensitive);
+                        Evaluation evaluation = analyze();
+                        Report report = generateReport(evaluation, classifierType, featureSelection, sampling, costSensitive);
                         reports.add(report);
                     }
                 }
@@ -62,31 +67,69 @@ public class Analysis {
         this.testing = controller.loadInstance(project, lastRelease, "testing");
     }
 
-    private void buildClassifier(AnalysisType.Classifiers classifierType) throws ClassifierException {
+    private void selectClassifier(AnalysisType.Classifiers classifierType) {
         switch (classifierType) {
             case RANDOM_FOREST -> classifier = new RandomForest();
             case NAIVE_BAYES -> classifier = new NaiveBayes();
             case IBK -> classifier = new IBk();
         }
+    }
+
+    private void applyFeatureSelection(AnalysisType.FeatureSelection featureSelection) throws FeatureSelectionException {
+        switch (featureSelection) {
+            case NONE -> {
+            }
+            case BEST_FIRST -> {
+                AttributeSelection filter = new AttributeSelection();
+                CfsSubsetEval evaluator = new CfsSubsetEval();
+                BestFirst search = new BestFirst();
+                filter.setEvaluator(evaluator);
+                filter.setSearch(search);
+                try {
+                    filter.setInputFormat(training);
+                    training = Filter.useFilter(training, filter);
+                    testing = Filter.useFilter(testing, filter);
+                } catch (Exception e) {
+                    throw new FeatureSelectionException("Could not apply Best First feature selection", e);
+                }
+            }
+        }
+    }
+
+    private void applySampling(AnalysisType.Sampling sampling) {
+
+    }
+
+    private void applyCostSensitive(AnalysisType.CostSensitive costSensitive) {
+
+    }
+
+    private Evaluation analyze() throws EvaluationException, ClassifierException {
         try {
             classifier.buildClassifier(training);
         } catch (Exception e) {
             throw new ClassifierException("Could not build classifier", e);
         }
-    }
-
-    private Report generateReport() throws EvaluationException {
         try {
             Evaluation evaluation = new Evaluation(training);
             evaluation.evaluateModel(classifier, testing);
-            return new Report(
-                    lastRelease,
-                    evaluation.precision(1),
-                    evaluation.recall(1),
-                    evaluation.areaUnderROC(1),
-                    evaluation.kappa());
+            return evaluation;
         } catch (Exception e) {
             throw new EvaluationException("Could not evaluate classifier", e);
         }
+    }
+
+    private Report generateReport(Evaluation evaluation, AnalysisType.Classifiers classifierType,
+                                  AnalysisType.FeatureSelection featureSelection, AnalysisType.Sampling sampling,
+                                  AnalysisType.CostSensitive costSensitive) {
+        double auc = evaluation.areaUnderROC(1);
+        if (Double.isNaN(auc)) auc = 0;
+        return new Report(
+                lastRelease,
+                classifierType, featureSelection, sampling, costSensitive,
+                evaluation.precision(1),
+                evaluation.recall(1),
+                auc,
+                evaluation.kappa());
     }
 }

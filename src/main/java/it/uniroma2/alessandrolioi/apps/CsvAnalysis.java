@@ -5,6 +5,7 @@ import it.uniroma2.alessandrolioi.analysis.boundaries.ReportHandler;
 import it.uniroma2.alessandrolioi.analysis.models.Report;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -24,6 +25,8 @@ public class CsvAnalysis {
             report.writeToFile();
         } catch (Exception e) {
             logger.severe(e.getMessage());
+            List<String> stackTraces = Arrays.stream(e.getStackTrace()).map(StackTraceElement::toString).toList();
+            logger.severe(String.join("\n", stackTraces));
         }
     }
 }
