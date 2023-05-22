@@ -33,15 +33,15 @@ public class Analysis {
 
     public List<Report> performAnalysis() throws ClassifierException, EvaluationException {
         List<Report> reports = new ArrayList<>();
-        for (AnalysisType.Classifiers classifier : AnalysisType.Classifiers.values()) {
-            this.buildClassifier(classifier);
+        for (AnalysisType.Classifiers classifierType : AnalysisType.Classifiers.values()) {
+            this.buildClassifier(classifierType);
             for (AnalysisType.FeatureSelection featureSelection : AnalysisType.FeatureSelection.values()) {
 //                        this.applyFeatureSelection(featureSelection);
                 for (AnalysisType.Sampling sampling : AnalysisType.Sampling.values()) {
 //                            this.applySampling(sampling);
                     for (AnalysisType.CostSensitive costSensitive : AnalysisType.CostSensitive.values()) {
                         Report report = this.generateReport();
-                        report.setProperties(classifier, featureSelection, sampling, costSensitive);
+                        report.setProperties(classifierType, featureSelection, sampling, costSensitive);
                         reports.add(report);
                     }
                 }
