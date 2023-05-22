@@ -12,9 +12,11 @@ import weka.classifiers.Evaluation;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.lazy.IBk;
 import weka.classifiers.trees.RandomForest;
+import weka.core.Instance;
 import weka.core.Instances;
 import weka.filters.Filter;
 import weka.filters.supervised.attribute.AttributeSelection;
+import weka.filters.supervised.instance.Resample;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +37,7 @@ public class Analysis {
         loadInstances();
     }
 
-    public List<Report> performAnalysis() throws ClassifierException, EvaluationException, FeatureSelectionException {
+    public List<Report> performAnalysis() throws ClassifierException, EvaluationException, FeatureSelectionException, SamplingException {
         List<Report> reports = new ArrayList<>();
         for (AnalysisType.Classifiers classifierType : AnalysisType.Classifiers.values()) {
             selectClassifier(classifierType);
@@ -96,18 +98,51 @@ public class Analysis {
         }
     }
 
-    private void applySampling(AnalysisType.Sampling sampling) {
-
+    private void applySampling(AnalysisType.Sampling sampling) throws SamplingException {
+        switch (sampling) {
+            case NONE -> {
+            }
+            case OVER_SAMPLING -> {
+                Resample resample = new Resample();
+                try {
+                    resample.setInputFormat(training);
+                    resample.setNoReplacement(false);
+                    resample.setBiasToUniformClass(1.0);
+                    int yesInstances = calculateYes();
+                    int majority = Math.max(yesInstances, training.size() - yesInstances);
+                    int minority = training.size() - majority;
+                    double percent = 100 * ((double) majority - minority) / minority;
+                    if (percent == 0) return;
+                    resample.setSampleSizePercent(percent);
+                    training = Filter.useFilter(training, resample);
+                } catch (Exception e) {
+                    throw new SamplingException("Could not apply Over Sampling", e);
+                }
+            }
+            case SMOTE -> {
+                
+            }
+        }
     }
 
     private void applyCostSensitive(AnalysisType.CostSensitive costSensitive) {
 
     }
 
+    private int calculateYes() {
+        int buggy = 0;
+        for (Instance instance : training) {
+            if (instance.stringValue(instance.numAttributes() - 1).equals("true"))
+                buggy += 1;
+        }
+        return buggy;
+    }
+
     private Evaluation analyze() throws EvaluationException, ClassifierException {
         try {
             classifier.buildClassifier(training);
         } catch (Exception e) {
+            e.printStackTrace();
             throw new ClassifierException("Could not build classifier", e);
         }
         try {

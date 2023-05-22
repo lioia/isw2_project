@@ -5,7 +5,7 @@ public class AnalysisType {
 
     public enum FeatureSelection {NONE, BEST_FIRST}
 
-    public enum Sampling {NONE}
+    public enum Sampling {NONE, OVER_SAMPLING, SMOTE}
 
     public enum CostSensitive {NONE}
 }
