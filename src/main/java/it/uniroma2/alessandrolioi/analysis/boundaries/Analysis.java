@@ -17,6 +17,7 @@ import weka.core.Instances;
 import weka.filters.Filter;
 import weka.filters.supervised.attribute.AttributeSelection;
 import weka.filters.supervised.instance.Resample;
+import weka.filters.supervised.instance.SMOTE;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -99,28 +100,34 @@ public class Analysis {
     }
 
     private void applySampling(AnalysisType.Sampling sampling) throws SamplingException {
+        int yesInstances = calculateYes();
+        int majority = Math.max(yesInstances, training.size() - yesInstances);
+        double percent = 100 * 2 * ((double) majority) / training.size();
+        if (percent < 50) percent = 100 - percent;
         switch (sampling) {
             case NONE -> {
             }
             case OVER_SAMPLING -> {
-                Resample resample = new Resample();
                 try {
-                    resample.setInputFormat(training);
-                    resample.setNoReplacement(false);
-                    resample.setBiasToUniformClass(1.0);
-                    int yesInstances = calculateYes();
-                    int majority = Math.max(yesInstances, training.size() - yesInstances);
-                    int minority = training.size() - majority;
-                    double percent = 100 * ((double) majority - minority) / minority;
-                    if (percent == 0) return;
-                    resample.setSampleSizePercent(percent);
-                    training = Filter.useFilter(training, resample);
+                    Resample overSample = new Resample();
+                    overSample.setInputFormat(training);
+                    overSample.setNoReplacement(false);
+                    overSample.setBiasToUniformClass(1.0);
+                    overSample.setSampleSizePercent(percent);
+                    training = Filter.useFilter(training, overSample);
                 } catch (Exception e) {
                     throw new SamplingException("Could not apply Over Sampling", e);
                 }
             }
             case SMOTE -> {
-                
+                try {
+                    SMOTE smote = new SMOTE();
+                    smote.setInputFormat(training);
+                    smote.setPercentage(percent);
+                    training = Filter.useFilter(training, smote);
+                } catch (Exception e) {
+                    throw new SamplingException("Could not apply SMOTE", e);
+                }
             }
         }
     }
