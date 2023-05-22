@@ -12,14 +12,15 @@ import weka.classifiers.lazy.IBk;
 import weka.classifiers.trees.RandomForest;
 import weka.core.Instances;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 public class Analysis {
     private final String project;
     private final int lastRelease;
-    private Instances testing, training;
+    private Instances testing;
+    private Instances training;
     private Classifier classifier;
 
     public Analysis(String project, int lastRelease) throws CsvException, ArffException {
@@ -30,19 +31,38 @@ public class Analysis {
         loadInstances();
     }
 
-    public void loadCsv() throws CsvException, ArffException {
+    public List<Report> performAnalysis() throws ClassifierException, EvaluationException {
+        List<Report> reports = new ArrayList<>();
+        for (AnalysisType.Classifiers classifier : AnalysisType.Classifiers.values()) {
+            this.buildClassifier(classifier);
+            for (AnalysisType.FeatureSelection featureSelection : AnalysisType.FeatureSelection.values()) {
+//                        this.applyFeatureSelection(featureSelection);
+                for (AnalysisType.Sampling sampling : AnalysisType.Sampling.values()) {
+//                            this.applySampling(sampling);
+                    for (AnalysisType.CostSensitive costSensitive : AnalysisType.CostSensitive.values()) {
+                        Report report = this.generateReport();
+                        report.setProperties(classifier, featureSelection, sampling, costSensitive);
+                        reports.add(report);
+                    }
+                }
+            }
+        }
+        return reports;
+    }
+
+    private void loadCsv() throws CsvException, ArffException {
         ConverterController controller = new ConverterController();
         Map<Integer, List<CsvEntry>> entries = controller.readCsv(project, lastRelease);
         controller.writeToArff(project, entries, lastRelease);
     }
 
-    public void loadInstances() throws ArffException {
+    private void loadInstances() throws ArffException {
         ConverterController controller = new ConverterController();
         this.training = controller.loadInstance(project, lastRelease, "training");
         this.testing = controller.loadInstance(project, lastRelease, "testing");
     }
 
-    public void buildClassifier(AnalysisType.Classifiers classifierType) throws ClassifierException {
+    private void buildClassifier(AnalysisType.Classifiers classifierType) throws ClassifierException {
         switch (classifierType) {
             case RANDOM_FOREST -> classifier = new RandomForest();
             case NAIVE_BAYES -> classifier = new NaiveBayes();
@@ -55,7 +75,7 @@ public class Analysis {
         }
     }
 
-    public Report generateReport() throws EvaluationException {
+    private Report generateReport() throws EvaluationException {
         try {
             Evaluation evaluation = new Evaluation(training);
             evaluation.evaluateModel(classifier, testing);

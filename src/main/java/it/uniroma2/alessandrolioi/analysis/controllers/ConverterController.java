@@ -3,6 +3,7 @@ package it.uniroma2.alessandrolioi.analysis.controllers;
 import it.uniroma2.alessandrolioi.analysis.exceptions.ArffException;
 import it.uniroma2.alessandrolioi.analysis.exceptions.CsvException;
 import it.uniroma2.alessandrolioi.analysis.models.CsvEntry;
+import it.uniroma2.alessandrolioi.common.DatasetPaths;
 import it.uniroma2.alessandrolioi.common.Metric;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils;
@@ -75,9 +76,9 @@ public class ConverterController {
     }
 
     private void writeFile(String filename, String project, List<String> attributes, List<String> entries) throws IOException {
-        if (!Files.exists(Paths.get("dataset")) || !Files.exists(Paths.get("dataset", project)))
+        if (!Files.exists(Paths.get("dataset")) || !Files.exists(DatasetPaths.fromProject(project)))
             throw new IOException("dataset folder does not exists");
-        Path path = Paths.get("dataset", project, filename);
+        Path path = DatasetPaths.fromProject(project).resolve(filename);
         String text = "@relation %s\n".formatted(project) +
                 String.join("\n", attributes) + "\n" +
                 "@attribute Buggy {true,false}\n" +
