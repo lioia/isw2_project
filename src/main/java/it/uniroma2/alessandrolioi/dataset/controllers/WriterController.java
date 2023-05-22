@@ -1,5 +1,6 @@
 package it.uniroma2.alessandrolioi.dataset.controllers;
 
+import it.uniroma2.alessandrolioi.common.DatasetPaths;
 import it.uniroma2.alessandrolioi.common.Pair;
 import it.uniroma2.alessandrolioi.dataset.exceptions.DatasetWriterException;
 import it.uniroma2.alessandrolioi.dataset.models.DatasetEntry;
@@ -10,7 +11,6 @@ import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -20,7 +20,7 @@ public class WriterController {
     public void writeToFile(String project, List<Pair<JiraVersion, GitCommitEntry>> revisions,
                             Map<String, List<DatasetEntry>> entries, int numberOfVersions) throws DatasetWriterException {
         try {
-            Files.createDirectories(Paths.get("dataset", project));
+            Files.createDirectories(DatasetPaths.fromProject(project));
 
             String header = writeHeader();
             List<String> values = new ArrayList<>();
@@ -33,7 +33,7 @@ public class WriterController {
             }
             String text = "%s\n%s".formatted(header, String.join("\n", values));
 
-            Path output = Paths.get("dataset", project, "%d.csv".formatted(numberOfVersions));
+            Path output = DatasetPaths.fromProject(project).resolve("%d.csv".formatted(numberOfVersions));
             Files.write(output, text.getBytes());
         } catch (IOException e) {
             throw new DatasetWriterException("", e);

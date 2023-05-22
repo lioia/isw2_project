@@ -1,7 +1,5 @@
 package it.uniroma2.alessandrolioi.dataset.exceptions;
 
-import it.uniroma2.alessandrolioi.git.exceptions.GitLogException;
-
 import java.io.Serial;
 
 public class MetricException extends Exception {

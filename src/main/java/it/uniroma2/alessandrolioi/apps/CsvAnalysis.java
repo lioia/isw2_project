@@ -1,8 +1,11 @@
 package it.uniroma2.alessandrolioi.apps;
 
-import it.uniroma2.alessandrolioi.analysis.Analysis;
-import it.uniroma2.alessandrolioi.analysis.exceptions.CsvException;
+import it.uniroma2.alessandrolioi.analysis.boundaries.Analysis;
+import it.uniroma2.alessandrolioi.analysis.boundaries.ReportHandler;
+import it.uniroma2.alessandrolioi.analysis.models.Report;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
 public class CsvAnalysis {
@@ -10,10 +13,16 @@ public class CsvAnalysis {
 
     public static void main(String[] args) {
         try {
-            Analysis analysis = new Analysis("bookkeeperDataset6.csv");
-            var entries = analysis.entries();
-            entries.keySet().forEach(version -> logger.info("%d, %d%n".formatted(version, entries.get(version).size())));
-        } catch (CsvException e) {
+            String project = "bookkeeper";
+            List<Report> reports = new ArrayList<>();
+            int numberOfReleases = 6;
+            for (int i = 2; i <= numberOfReleases; i++) {
+                Analysis analysis = new Analysis(project, i);
+                reports.addAll(analysis.performAnalysis());
+            }
+            ReportHandler report = new ReportHandler(project, reports);
+            report.writeToFile();
+        } catch (Exception e) {
             logger.severe(e.getMessage());
         }
     }
