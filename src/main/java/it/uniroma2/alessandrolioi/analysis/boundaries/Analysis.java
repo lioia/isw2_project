@@ -75,13 +75,11 @@ public class Analysis {
     }
 
     private Classifier selectClassifier(AnalysisType.Classifiers classifierType) {
-        Classifier classifier = null;
-        switch (classifierType) {
-            case RANDOM_FOREST -> classifier = new RandomForest();
-            case NAIVE_BAYES -> classifier = new NaiveBayes();
-            case IBK -> classifier = new IBk();
-        }
-        return classifier;
+        return switch (classifierType) {
+            case RANDOM_FOREST -> new RandomForest();
+            case NAIVE_BAYES -> new NaiveBayes();
+            case IBK -> new IBk();
+        };
     }
 
     private void applyFeatureSelection(AnalysisType.FeatureSelection featureSelection) throws FeatureSelectionException {
