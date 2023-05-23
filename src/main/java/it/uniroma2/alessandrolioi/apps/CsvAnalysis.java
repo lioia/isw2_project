@@ -17,8 +17,8 @@ public class CsvAnalysis {
             String project = "bookkeeper";
             List<Report> reports = new ArrayList<>();
             int numberOfReleases = 6;
-            for (int i = 2; i <= numberOfReleases; i++) {
-                Analysis analysis = new Analysis(project, i);
+            for (int i = 2; i < numberOfReleases; i++) {
+                Analysis analysis = new Analysis(project, i, numberOfReleases);
                 reports.addAll(analysis.performAnalysis());
             }
             ReportHandler report = new ReportHandler(project, reports);

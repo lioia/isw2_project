@@ -7,5 +7,5 @@ public class AnalysisType {
 
     public enum Sampling {NONE, OVER_SAMPLING, SMOTE}
 
-    public enum CostSensitive {NONE}
+    public enum CostSensitive {NONE, COST_SENSITIVE_THRESHOLD}
 }
