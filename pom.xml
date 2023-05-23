@@ -43,5 +43,12 @@
             <artifactId>weka-stable</artifactId>
             <version>3.8.0</version>
         </dependency>
+        <!-- Package used for accessing SMOTE Weka API -->
+        <!-- https://mvnrepository.com/artifact/nz.ac.waikato.cms.weka/SMOTE -->
+        <dependency>
+            <groupId>nz.ac.waikato.cms.weka</groupId>
+            <artifactId>SMOTE</artifactId>
+            <version>1.0.3</version>
+        </dependency>
     </dependencies>
 </project>

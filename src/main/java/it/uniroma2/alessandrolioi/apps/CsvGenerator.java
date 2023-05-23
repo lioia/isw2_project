@@ -35,11 +35,9 @@ public class CsvGenerator {
             logger.info("Creating dataset");
             DatasetBuilder dataset = new DatasetBuilder(integration, git);
             dataset.applyMetrics();
-            for (int i = 1; i <= jiraProject.getVersions().size(); i++) {
-                dataset.setBuggy(i);
-                dataset.writeToFile(project, i);
-                logger.info("Dataset successfully created: %s with %d release(s)".formatted(project, i));
-            }
+            dataset.setBuggy(jiraProject.getVersions().size());
+            dataset.writeToFile(project, jiraProject.getVersions().size());
+            logger.info("Dataset successfully created: %s with %d releases".formatted(project, jiraProject.getVersions().size()));
         } catch (Exception e) {
             logger.severe(e.getMessage());
         } finally {
