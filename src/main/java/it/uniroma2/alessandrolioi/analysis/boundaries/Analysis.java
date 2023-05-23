@@ -26,13 +26,15 @@ import java.util.Map;
 public class Analysis {
     private final String project;
     private final int lastRelease;
+    private final int totalReleases;
     private Instances testing;
     private Instances training;
     private Classifier classifier;
 
-    public Analysis(String project, int lastRelease) throws CsvException, ArffException {
+    public Analysis(String project, int lastRelease, int totalReleases) throws CsvException, ArffException {
         this.project = project;
         this.lastRelease = lastRelease;
+        this.totalReleases = totalReleases;
 
         loadCsv();
         loadInstances();
@@ -60,7 +62,7 @@ public class Analysis {
 
     private void loadCsv() throws CsvException, ArffException {
         ConverterController controller = new ConverterController();
-        Map<Integer, List<CsvEntry>> entries = controller.readCsv(project, lastRelease);
+        Map<Integer, List<CsvEntry>> entries = controller.readCsv(project, totalReleases);
         controller.writeToArff(project, entries, lastRelease);
     }
 
