@@ -24,7 +24,6 @@ import weka.filters.supervised.instance.SMOTE;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public class Analysis {
     private final String project;
@@ -75,13 +74,11 @@ public class Analysis {
     }
 
     private Classifier selectClassifier(AnalysisType.Classifiers classifierType) {
-        Classifier classifier = null;
-        switch (classifierType) {
-            case RANDOM_FOREST -> classifier = new RandomForest();
-            case NAIVE_BAYES -> classifier = new NaiveBayes();
-            case IBK -> classifier = new IBk();
-        }
-        return classifier;
+        return switch (classifierType) {
+            case RANDOM_FOREST -> new RandomForest();
+            case NAIVE_BAYES -> new NaiveBayes();
+            case IBK -> new IBk();
+        };
     }
 
     private void applyFeatureSelection(AnalysisType.FeatureSelection featureSelection) throws FeatureSelectionException {

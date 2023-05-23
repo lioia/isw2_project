@@ -80,9 +80,8 @@ public class GitCommitController {
     }
 
     public String getContentsOfFile(Repository repository, GitCommitEntry commit, String fileName) throws GitFileException {
-        try (TreeWalk walk = TreeWalk.forPath(repository, fileName, commit.tree())) {
+        try (TreeWalk walk = TreeWalk.forPath(repository, fileName, commit.tree()); ObjectReader reader = repository.newObjectReader();) {
             ObjectId blobId = walk.getObjectId(0);
-            ObjectReader reader = repository.newObjectReader();
             ObjectLoader loader = reader.open(blobId);
             return new String(loader.getBytes(), StandardCharsets.UTF_8);
         } catch (CorruptObjectException e) {

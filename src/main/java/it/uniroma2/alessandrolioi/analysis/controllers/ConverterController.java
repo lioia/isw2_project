@@ -79,7 +79,7 @@ public class ConverterController {
         if (!Files.exists(Paths.get("dataset")) || !Files.exists(DatasetPaths.fromProject(project)))
             throw new IOException("dataset folder does not exists");
         Path path = DatasetPaths.fromProject(project).resolve(filename);
-        String text = "@relation %s\n".formatted(project) +
+        String text = "@relation %s%n".formatted(project) +
                 String.join("\n", attributes) + "\n" +
                 "@attribute Buggy {true,false}\n" +
                 "@data\n" +
