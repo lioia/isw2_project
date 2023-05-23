@@ -15,7 +15,7 @@ public class CsvAnalysis {
     private static final Logger logger = Logger.getLogger("CsvAnalysis");
 
     public static void main(String[] args) {
-        for (String project : Projects.names) {
+        for (String project : Projects.names()) {
             if (logger.isLoggable(Level.INFO))
                 logger.info("Analysis: %s".formatted(project));
             try {

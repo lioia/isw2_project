@@ -17,9 +17,9 @@ public class CsvGenerator {
     private static final Logger logger = Logger.getLogger("CsvGenerator");
 
     public static void main(String[] args) {
-        for (int i = 0; i < Projects.names.length; i++) {
-            String project = Projects.names[i];
-            String coldStartProject = Projects.names[Projects.names.length - i - 1];
+        for (int i = 0; i < Projects.names().length; i++) {
+            String project = Projects.names()[i];
+            String coldStartProject = Projects.names()[Projects.names().length - i - 1];
 
             projectGeneration(project, coldStartProject);
         }
@@ -54,15 +54,14 @@ public class CsvGenerator {
         } catch (Exception e) {
             if (logger.isLoggable(Level.SEVERE))
                 logger.severe(e.getMessage());
-        } finally {
-            if (git != null) {
-                try {
-                    if (!git.close() && logger.isLoggable(Level.SEVERE))
-                        logger.severe("Could not clean git repository for %s".formatted(project));
-                } catch (IOException e) {
-                    if (logger.isLoggable(Level.SEVERE))
-                        logger.severe("Could not clean git repository");
-                }
+        }
+        if (git != null) {
+            try {
+                if (!git.close() && logger.isLoggable(Level.SEVERE))
+                    logger.severe("Could not clean git repository for %s".formatted(project));
+            } catch (IOException e) {
+                if (logger.isLoggable(Level.SEVERE))
+                    logger.severe("Could not clean git repository");
             }
         }
     }
