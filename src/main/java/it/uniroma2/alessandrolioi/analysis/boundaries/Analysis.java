@@ -40,14 +40,14 @@ public class Analysis {
 
     public List<Report> performAnalysis() throws ClassifierException, EvaluationException, FeatureSelectionException, SamplingException {
         List<Report> reports = new ArrayList<>();
-        for (AnalysisType.Classifiers classifierType : AnalysisType.Classifiers.values()) {
-            selectClassifier(classifierType);
-            for (AnalysisType.FeatureSelection featureSelection : AnalysisType.FeatureSelection.values()) {
-                applyFeatureSelection(featureSelection);
-                for (AnalysisType.Sampling sampling : AnalysisType.Sampling.values()) {
-                    applySampling(sampling);
-                    for (AnalysisType.CostSensitive costSensitive : AnalysisType.CostSensitive.values()) {
-                        applyCostSensitive(costSensitive);
+        for (AnalysisType.FeatureSelection featureSelection : AnalysisType.FeatureSelection.values()) {
+            applyFeatureSelection(featureSelection);
+            for (AnalysisType.Sampling sampling : AnalysisType.Sampling.values()) {
+                applySampling(sampling);
+                for (AnalysisType.CostSensitive costSensitive : AnalysisType.CostSensitive.values()) {
+                    applyCostSensitive(costSensitive);
+                    for (AnalysisType.Classifiers classifierType : AnalysisType.Classifiers.values()) {
+                        selectClassifier(classifierType);
                         Evaluation evaluation = analyze();
                         Report report = generateReport(evaluation, classifierType, featureSelection, sampling, costSensitive);
                         reports.add(report);
