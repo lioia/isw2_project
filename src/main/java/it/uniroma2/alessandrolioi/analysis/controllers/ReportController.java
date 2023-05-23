@@ -12,7 +12,7 @@ import java.util.List;
 public class ReportController {
     public void writeReports(String project, List<Report> reports) throws ReportWriterException {
         List<String> reportsString = reports.stream().map(r -> r.toCsvString(project)).toList();
-        String text = "Project,#TrainingRelease,Classifier,FeatureSelection,Sampling,CostSensitive,Precision,Recall,Kappa,AUC\n%s"
+        String text = "Project,#TrainingRelease,Classifier,FeatureSelection,Sampling,CostSensitive,Precision,Recall,Kappa,AUC%n%s"
                 .formatted(String.join("\n", reportsString));
         Path path = DatasetPaths.fromProject(project).resolve("reports.csv");
         try {
