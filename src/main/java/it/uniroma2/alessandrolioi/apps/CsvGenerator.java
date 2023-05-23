@@ -55,10 +55,8 @@ public class CsvGenerator {
             if (logger.isLoggable(Level.SEVERE))
                 logger.severe(e.getMessage());
         } finally {
-            if (git != null) {
-                if (!git.close() && logger.isLoggable(Level.SEVERE))
-                    logger.severe("Could not clean git repository for %s".formatted(project));
-            }
+            if (git != null && !git.close() && logger.isLoggable(Level.SEVERE))
+                logger.severe("Could not clean git repository for %s".formatted(project));
         }
     }
 }
