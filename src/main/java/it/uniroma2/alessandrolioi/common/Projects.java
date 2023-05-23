@@ -5,5 +5,5 @@ public class Projects {
         throw new IllegalStateException("Utility class");
     }
 
-    public static String[] names = new String[]{"bookkeeper", "avro"};
+    public static final String[] names = new String[]{"bookkeeper", "avro"};
 }

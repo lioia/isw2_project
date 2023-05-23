@@ -21,43 +21,47 @@ public class CsvGenerator {
             String project = Projects.names[i];
             String coldStartProject = Projects.names[Projects.names.length - i - 1];
 
-            Git git = null;
-            try {
-                Jira jiraProject = new Jira(project);
-                Jira jiraColdStartProject = new Jira(coldStartProject);
-                double coldStart = jiraColdStartProject.calculateColdStart();
-                jiraProject.applyProportion(coldStart);
+            projectGeneration(project, coldStartProject);
+        }
+    }
 
-                git = new Git(project, "https://github.com/apache/%s".formatted(project), "master");
+    private static void projectGeneration(String project, String coldStartProject) {
+        Git git = null;
+        try {
+            Jira jiraProject = new Jira(project);
+            Jira jiraColdStartProject = new Jira(coldStartProject);
+            double coldStart = jiraColdStartProject.calculateColdStart();
+            jiraProject.applyProportion(coldStart);
 
-                if (logger.isLoggable(Level.INFO))
-                    logger.info("Loading integration between Jira and Git");
-                JiraGitIntegration integration = new JiraGitIntegration(git.getCommits());
-                integration.findRevisions(jiraProject.getVersions());
+            git = new Git(project, "https://github.com/apache/%s".formatted(project), "master");
 
-                for (Pair<JiraVersion, GitCommitEntry> version : integration.versions())
-                    git.loadClassesOfRevision(version.second());
+            if (logger.isLoggable(Level.INFO))
+                logger.info("Loading integration between Jira and Git");
+            JiraGitIntegration integration = new JiraGitIntegration(git.getCommits());
+            integration.findRevisions(jiraProject.getVersions());
 
-                if (logger.isLoggable(Level.INFO))
-                    logger.info("Creating dataset");
-                DatasetBuilder dataset = new DatasetBuilder(integration, git);
-                dataset.applyMetrics();
-                dataset.setBuggy(jiraProject.getVersions().size());
-                dataset.writeToFile(project, jiraProject.getVersions().size());
-                if (logger.isLoggable(Level.INFO))
-                    logger.info("Dataset successfully created: %s with %d releases".formatted(project, jiraProject.getVersions().size()));
-            } catch (Exception e) {
-                if (logger.isLoggable(Level.SEVERE))
-                    logger.severe(e.getMessage());
-            } finally {
-                if (git != null) {
-                    try {
-                        if (!git.close() && logger.isLoggable(Level.SEVERE))
-                            logger.severe("Could not clean git repository for %s".formatted(project));
-                    } catch (IOException e) {
-                        if (logger.isLoggable(Level.SEVERE))
-                            logger.severe("Could not clean git repository");
-                    }
+            for (Pair<JiraVersion, GitCommitEntry> version : integration.versions())
+                git.loadClassesOfRevision(version.second());
+
+            if (logger.isLoggable(Level.INFO))
+                logger.info("Creating dataset");
+            DatasetBuilder dataset = new DatasetBuilder(integration, git);
+            dataset.applyMetrics();
+            dataset.setBuggy(jiraProject.getVersions().size());
+            dataset.writeToFile(project, jiraProject.getVersions().size());
+            if (logger.isLoggable(Level.INFO))
+                logger.info("Dataset successfully created: %s with %d releases".formatted(project, jiraProject.getVersions().size()));
+        } catch (Exception e) {
+            if (logger.isLoggable(Level.SEVERE))
+                logger.severe(e.getMessage());
+        } finally {
+            if (git != null) {
+                try {
+                    if (!git.close() && logger.isLoggable(Level.SEVERE))
+                        logger.severe("Could not clean git repository for %s".formatted(project));
+                } catch (IOException e) {
+                    if (logger.isLoggable(Level.SEVERE))
+                        logger.severe("Could not clean git repository");
                 }
             }
         }
