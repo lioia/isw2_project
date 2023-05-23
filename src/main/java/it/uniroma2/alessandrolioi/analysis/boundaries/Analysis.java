@@ -24,6 +24,7 @@ import weka.filters.supervised.instance.SMOTE;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class Analysis {
     private final String project;
@@ -84,22 +85,18 @@ public class Analysis {
     }
 
     private void applyFeatureSelection(AnalysisType.FeatureSelection featureSelection) throws FeatureSelectionException {
-        switch (featureSelection) {
-            case NONE -> {
-            }
-            case BEST_FIRST -> {
-                AttributeSelection filter = new AttributeSelection();
-                CfsSubsetEval evaluator = new CfsSubsetEval();
-                BestFirst search = new BestFirst();
-                filter.setEvaluator(evaluator);
-                filter.setSearch(search);
-                try {
-                    filter.setInputFormat(training);
-                    training = Filter.useFilter(training, filter);
-                    testing = Filter.useFilter(testing, filter);
-                } catch (Exception e) {
-                    throw new FeatureSelectionException("Could not apply Best First feature selection", e);
-                }
+        if (featureSelection == AnalysisType.FeatureSelection.BEST_FIRST) {
+            AttributeSelection filter = new AttributeSelection();
+            CfsSubsetEval evaluator = new CfsSubsetEval();
+            BestFirst search = new BestFirst();
+            filter.setEvaluator(evaluator);
+            filter.setSearch(search);
+            try {
+                filter.setInputFormat(training);
+                training = Filter.useFilter(training, filter);
+                testing = Filter.useFilter(testing, filter);
+            } catch (Exception e) {
+                throw new FeatureSelectionException("Could not apply Best First feature selection", e);
             }
         }
     }
@@ -111,6 +108,7 @@ public class Analysis {
         if (percent < 50) percent = 100 - percent;
         switch (sampling) {
             case NONE -> {
+                // does not need to apply anything
             }
             case OVER_SAMPLING -> {
                 try {
