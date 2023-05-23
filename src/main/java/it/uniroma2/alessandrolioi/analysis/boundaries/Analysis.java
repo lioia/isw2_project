@@ -8,9 +8,11 @@ import it.uniroma2.alessandrolioi.analysis.models.Report;
 import weka.attributeSelection.BestFirst;
 import weka.attributeSelection.CfsSubsetEval;
 import weka.classifiers.Classifier;
+import weka.classifiers.CostMatrix;
 import weka.classifiers.Evaluation;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.lazy.IBk;
+import weka.classifiers.meta.CostSensitiveClassifier;
 import weka.classifiers.trees.RandomForest;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -29,7 +31,6 @@ public class Analysis {
     private final int totalReleases;
     private Instances testing;
     private Instances training;
-    private Classifier classifier;
 
     public Analysis(String project, int lastRelease, int totalReleases) throws CsvException, ArffException {
         this.project = project;
@@ -47,10 +48,10 @@ public class Analysis {
             for (AnalysisType.Sampling sampling : AnalysisType.Sampling.values()) {
                 applySampling(sampling);
                 for (AnalysisType.CostSensitive costSensitive : AnalysisType.CostSensitive.values()) {
-                    applyCostSensitive(costSensitive);
                     for (AnalysisType.Classifiers classifierType : AnalysisType.Classifiers.values()) {
-                        selectClassifier(classifierType);
-                        Evaluation evaluation = analyze();
+                        Classifier classifier = selectClassifier(classifierType);
+                        classifier = applyCostSensitive(costSensitive, classifier);
+                        Evaluation evaluation = analyze(classifier);
                         Report report = generateReport(evaluation, classifierType, featureSelection, sampling, costSensitive);
                         reports.add(report);
                     }
@@ -72,12 +73,14 @@ public class Analysis {
         this.testing = controller.loadInstance(project, lastRelease, "testing");
     }
 
-    private void selectClassifier(AnalysisType.Classifiers classifierType) {
+    private Classifier selectClassifier(AnalysisType.Classifiers classifierType) {
+        Classifier classifier = null;
         switch (classifierType) {
             case RANDOM_FOREST -> classifier = new RandomForest();
             case NAIVE_BAYES -> classifier = new NaiveBayes();
             case IBK -> classifier = new IBk();
         }
+        return classifier;
     }
 
     private void applyFeatureSelection(AnalysisType.FeatureSelection featureSelection) throws FeatureSelectionException {
@@ -134,8 +137,20 @@ public class Analysis {
         }
     }
 
-    private void applyCostSensitive(AnalysisType.CostSensitive costSensitive) {
-
+    private Classifier applyCostSensitive(AnalysisType.CostSensitive costSensitive, Classifier classifier) {
+        if (costSensitive == AnalysisType.CostSensitive.COST_SENSITIVE_THRESHOLD) {
+            CostMatrix matrix = new CostMatrix(2);
+            matrix.setCell(0, 0, 0.0);
+            matrix.setCell(0, 1, 1.0);
+            matrix.setCell(1, 0, 10.0);
+            matrix.setCell(1, 1, 0.0);
+            CostSensitiveClassifier costSensitiveClassifier = new CostSensitiveClassifier();
+            costSensitiveClassifier.setCostMatrix(matrix);
+            costSensitiveClassifier.setClassifier(classifier);
+            return costSensitiveClassifier;
+        } else {
+            return classifier;
+        }
     }
 
     private int calculateYes() {
@@ -147,7 +162,7 @@ public class Analysis {
         return buggy;
     }
 
-    private Evaluation analyze() throws EvaluationException, ClassifierException {
+    private Evaluation analyze(Classifier classifier) throws EvaluationException, ClassifierException {
         try {
             classifier.buildClassifier(training);
         } catch (Exception e) {
