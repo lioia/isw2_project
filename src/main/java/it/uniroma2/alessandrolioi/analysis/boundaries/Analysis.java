@@ -166,7 +166,6 @@ public class Analysis {
         try {
             classifier.buildClassifier(training);
         } catch (Exception e) {
-            e.printStackTrace();
             throw new ClassifierException("Could not build classifier", e);
         }
         try {
