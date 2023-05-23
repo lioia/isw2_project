@@ -13,8 +13,8 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class CsvGenerator {
-    private static final Logger logger = Logger.getLogger("CsvGenerator");
+public class DatasetGeneratorApp {
+    private static final Logger logger = Logger.getLogger("DatasetGenerator");
 
     public static void main(String[] args) throws IOException {
         for (int i = 0; i < Projects.names().length; i++) {
