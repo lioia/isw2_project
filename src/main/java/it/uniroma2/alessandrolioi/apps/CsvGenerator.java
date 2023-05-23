@@ -25,7 +25,7 @@ public class CsvGenerator {
         }
     }
 
-    private static void projectGeneration(String project, String coldStartProject) {
+    private static void projectGeneration(String project, String coldStartProject) throws IOException {
         Git git = null;
         try {
             Jira jiraProject = new Jira(project);
@@ -54,14 +54,10 @@ public class CsvGenerator {
         } catch (Exception e) {
             if (logger.isLoggable(Level.SEVERE))
                 logger.severe(e.getMessage());
-        }
-        if (git != null) {
-            try {
+        } finally {
+            if (git != null) {
                 if (!git.close() && logger.isLoggable(Level.SEVERE))
                     logger.severe("Could not clean git repository for %s".formatted(project));
-            } catch (IOException e) {
-                if (logger.isLoggable(Level.SEVERE))
-                    logger.severe("Could not clean git repository");
             }
         }
     }
