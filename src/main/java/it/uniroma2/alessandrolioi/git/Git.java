@@ -12,8 +12,10 @@ import it.uniroma2.alessandrolioi.git.models.GitDiffEntry;
 import org.eclipse.jgit.lib.Repository;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Git {
@@ -25,29 +27,33 @@ public class Git {
 
     // Remote Repository
     public Git(String project, String url, String branch) throws GitRepoException, GitLogException {
-        logger.info("Cloning remote repository (this might take a while)...");
+        if (logger.isLoggable(Level.INFO))
+            logger.info("Cloning remote repository (this might take a while)...");
         GitRepoController repoController = new GitRepoController();
         GitCommitController commitController = new GitCommitController();
 
         this.folder = new File(project);
         this.repository = repoController.cloneRemote(folder, url, branch);
         this.commits = commitController.getCommits(repository);
-        logger.info("Repository successfully cloned");
+        if (logger.isLoggable(Level.INFO))
+            logger.info("Repository successfully cloned");
     }
 
     // Local Repository
     public Git(String folderPath) throws GitRepoException, GitLogException {
-        logger.info("Loading local repository");
+        if (logger.isLoggable(Level.INFO))
+            logger.info("Loading local repository");
         GitRepoController repoController = new GitRepoController();
         GitCommitController commitController = new GitCommitController();
 
         this.folder = new File(folderPath);
         this.repository = repoController.loadLocal(folder);
         this.commits = commitController.getCommits(repository);
-        logger.info("Repository successfully loaded");
+        if (logger.isLoggable(Level.INFO))
+            logger.info("Repository successfully loaded");
     }
 
-    public boolean close() {
+    public boolean close() throws IOException {
         GitRepoController controller = new GitRepoController();
 
         repository.close();

@@ -4,4 +4,8 @@ public class CsvException extends Exception {
     public CsvException(String reason, Throwable cause) {
         super(reason, cause);
     }
+
+    public CsvException(String reason) {
+        super(reason);
+    }
 }

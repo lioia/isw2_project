@@ -1,9 +1,8 @@
 package it.uniroma2.alessandrolioi.analysis.boundaries;
 
-import it.uniroma2.alessandrolioi.analysis.controllers.ConverterController;
+import it.uniroma2.alessandrolioi.analysis.controllers.AnalysisController;
 import it.uniroma2.alessandrolioi.analysis.exceptions.*;
 import it.uniroma2.alessandrolioi.analysis.models.AnalysisType;
-import it.uniroma2.alessandrolioi.analysis.models.CsvEntry;
 import it.uniroma2.alessandrolioi.analysis.models.Report;
 import weka.attributeSelection.BestFirst;
 import weka.attributeSelection.CfsSubsetEval;
@@ -23,21 +22,17 @@ import weka.filters.supervised.instance.SMOTE;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class Analysis {
     private final String project;
     private final int lastRelease;
-    private final int totalReleases;
     private Instances testing;
     private Instances training;
 
-    public Analysis(String project, int lastRelease, int totalReleases) throws CsvException, ArffException {
+    public Analysis(String project, int lastRelease) throws ArffException {
         this.project = project;
         this.lastRelease = lastRelease;
-        this.totalReleases = totalReleases;
 
-        loadCsv();
         loadInstances();
     }
 
@@ -61,14 +56,8 @@ public class Analysis {
         return reports;
     }
 
-    private void loadCsv() throws CsvException, ArffException {
-        ConverterController controller = new ConverterController();
-        Map<Integer, List<CsvEntry>> entries = controller.readCsv(project, totalReleases);
-        controller.writeToArff(project, entries, lastRelease);
-    }
-
     private void loadInstances() throws ArffException {
-        ConverterController controller = new ConverterController();
+        AnalysisController controller = new AnalysisController();
         this.training = controller.loadInstance(project, lastRelease, "training");
         this.testing = controller.loadInstance(project, lastRelease, "testing");
     }
