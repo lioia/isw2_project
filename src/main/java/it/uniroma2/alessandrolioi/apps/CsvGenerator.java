@@ -16,7 +16,7 @@ import java.util.logging.Logger;
 public class CsvGenerator {
     private static final Logger logger = Logger.getLogger("CsvGenerator");
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         for (int i = 0; i < Projects.names().length; i++) {
             String project = Projects.names()[i];
             String coldStartProject = Projects.names()[Projects.names().length - i - 1];
