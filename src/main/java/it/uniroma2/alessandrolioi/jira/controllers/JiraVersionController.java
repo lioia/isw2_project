@@ -32,7 +32,7 @@ public class JiraVersionController {
         versions.sort(Comparator.comparing(JiraVersion::releaseDate));
 
         // Loading only 50% of releases (for better dataset accuracy ~ snoring problem)
-        int numberOfVersions = (int) (((float) versions.size()) / 2);
+        int numberOfVersions = (versions.size() + 1) / 2;
         return versions.subList(0, numberOfVersions);
     }
 }

@@ -31,9 +31,9 @@ public class WriterController {
                     values.add(value);
                 }
             }
-            String text = "%s\n%s".formatted(header, String.join("\n", values));
+            String text = "%s%n%s".formatted(header, String.join("\n", values));
 
-            Path output = DatasetPaths.fromProject(project).resolve("%d.csv".formatted(numberOfVersions));
+            Path output = DatasetPaths.fromProject(project).resolve("dataset.csv");
             Files.write(output, text.getBytes());
         } catch (IOException e) {
             throw new DatasetWriterException("", e);

@@ -8,6 +8,7 @@ import org.eclipse.jgit.lib.RepositoryBuilder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class GitRepoController {
@@ -37,7 +38,7 @@ public class GitRepoController {
         }
     }
 
-    public boolean recurseClean(File folder) {
+    public boolean recurseClean(File folder) throws IOException {
         File[] files = folder.listFiles();
         if (files != null) {
             for (File file : files) {
@@ -45,6 +46,6 @@ public class GitRepoController {
                 if (!recurseClean(file)) return false;
             }
         }
-        return folder.delete();
+        return Files.deleteIfExists(folder.toPath());
     }
 }
