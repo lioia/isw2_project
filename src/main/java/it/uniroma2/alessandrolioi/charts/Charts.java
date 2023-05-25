@@ -91,10 +91,10 @@ public class Charts {
     }
 
     private void createImages(String category, String folder, Map<String, DefaultBoxAndWhiskerCategoryDataset> datasets) throws IOException {
-        for (String metric : datasets.keySet()) {
+        for (Map.Entry<String, DefaultBoxAndWhiskerCategoryDataset> entry : datasets.entrySet()) {
             JFreeChart chart = ChartFactory.createBoxAndWhiskerChart(
-                    "%s Comparison".formatted(category), category, metric,
-                    datasets.get(metric), true);
+                    "%s Comparison".formatted(category), category, entry.getKey(),
+                    entry.getValue(), true);
             CategoryPlot plot = (CategoryPlot) chart.getPlot();
             plot.getRangeAxis().setRange(-1f, 1f);
             BoxAndWhiskerRenderer renderer = (BoxAndWhiskerRenderer) plot.getRenderer();
@@ -102,7 +102,7 @@ public class Charts {
             BufferedImage precisionImage = chart.createBufferedImage(800, 800);
             Path folderPath = DatasetPaths.fromProject(project).resolve(folder);
             if (!Files.exists(folderPath)) Files.createDirectory(folderPath);
-            Path path = folderPath.resolve("%s.png".formatted(metric));
+            Path path = folderPath.resolve("%s.png".formatted(entry.getKey()));
             ImageIO.write(precisionImage, "png", path.toFile());
         }
     }
