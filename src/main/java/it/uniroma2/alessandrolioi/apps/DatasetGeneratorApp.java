@@ -47,8 +47,11 @@ public class DatasetGeneratorApp {
                 logger.info("Creating dataset");
             DatasetBuilder dataset = new DatasetBuilder(integration, git);
             dataset.applyMetrics();
-            dataset.setBuggy(jiraProject.getVersions().size());
-            dataset.writeToFile(project, jiraProject.getVersions().size());
+            for (int i = 2; i <= jiraProject.getVersions().size(); i++) {
+                dataset.setBuggy(i);
+                dataset.writeToFile(project, i);
+            }
+            dataset.writeOracle(project, jiraProject.getVersions().size());
             if (logger.isLoggable(Level.INFO))
                 logger.info("Dataset successfully created: %s with %d releases".formatted(project, jiraProject.getVersions().size()));
         } catch (Exception e) {

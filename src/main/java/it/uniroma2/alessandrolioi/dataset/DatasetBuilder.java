@@ -70,7 +70,14 @@ public class DatasetBuilder {
 
     public void writeToFile(String project, int numberOfVersions) throws DatasetWriterException {
         WriterController controller = new WriterController();
-        controller.writeToFile(project, versions, entries, numberOfVersions);
+        String text = controller.writeToText(versions, entries, numberOfVersions);
+        controller.writeToFile(project, text, String.valueOf(numberOfVersions));
+    }
+
+    public void writeOracle(String project, int numberOfVersions) throws DatasetWriterException {
+        WriterController controller = new WriterController();
+        String text = controller.writeToText(versions, entries, numberOfVersions);
+        controller.writeToFile(project, text, "oracle");
     }
 
     private Void applyMetric(MetricValue metric) {
