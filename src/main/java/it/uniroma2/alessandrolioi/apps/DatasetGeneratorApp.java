@@ -10,6 +10,10 @@ import it.uniroma2.alessandrolioi.jira.Jira;
 import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -19,19 +23,27 @@ public class DatasetGeneratorApp {
     public static void main(String[] args) throws IOException {
         for (int i = 0; i < Projects.names().length; i++) {
             String project = Projects.names()[i];
-            String coldStartProject = Projects.names()[Projects.names().length - i - 1];
+            String other = Projects.names()[Projects.names().length - i - 1];
+            List<String> coldStarts = new ArrayList<>(Arrays.asList(Projects.coldStarts()));
+            coldStarts.add(other);
 
-            projectGeneration(project, coldStartProject);
+            projectGeneration(project, coldStarts);
         }
     }
 
-    private static void projectGeneration(String project, String coldStartProject) throws IOException {
+    private static void projectGeneration(String project, List<String> coldStartProjects) throws IOException {
         Git git = null;
         try {
             Jira jiraProject = new Jira(project);
-            Jira jiraColdStartProject = new Jira(coldStartProject);
-            double coldStart = jiraColdStartProject.calculateColdStart();
-            jiraProject.applyProportion(coldStart);
+            List<Double> coldStarts = new ArrayList<>();
+            for (String coldStartProject : coldStartProjects) {
+                Jira jiraColdStartProject = new Jira(coldStartProject);
+                double coldStart = jiraColdStartProject.calculateColdStart();
+                coldStarts.add(coldStart);
+            }
+            coldStarts.sort(Comparator.naturalOrder());
+            // Get Median
+            jiraProject.applyProportion(coldStarts.get(coldStarts.size() / 2));
 
             git = new Git(project, "https://github.com/apache/%s".formatted(project), "master");
 

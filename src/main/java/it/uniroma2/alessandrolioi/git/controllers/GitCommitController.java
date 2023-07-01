@@ -117,8 +117,9 @@ public class GitCommitController {
         String hash = commit.getName();
         String message = commit.getShortMessage();
         LocalDateTime date = LocalDateTime.ofInstant(commit.getCommitterIdent().getWhenAsInstant(), commit.getCommitterIdent().getZoneId());
-        RevTree tree = commit.getTree();
+        String author = commit.getAuthorIdent().getName();
         List<RevTree> parents = Arrays.stream(commit.getParents()).map(RevCommit::getTree).toList();
-        return new GitCommitEntry(hash, message, date, tree, parents);
+        RevTree tree = commit.getTree();
+        return new GitCommitEntry(hash, message, date, author, tree, parents);
     }
 }

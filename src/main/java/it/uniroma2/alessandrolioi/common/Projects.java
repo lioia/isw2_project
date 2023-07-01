@@ -5,9 +5,11 @@ public class Projects {
         throw new IllegalStateException("Utility class");
     }
 
-    private static final String[] names = new String[]{"bookkeeper", "avro"};
-
     public static String[] names() {
-        return names;
+        return new String[]{"bookkeeper", "avro"};
+    }
+
+    public static String[] coldStarts() {
+        return new String[]{"openjpa", "storm", "zookeeper", "syncope", "tajo"};
     }
 }
