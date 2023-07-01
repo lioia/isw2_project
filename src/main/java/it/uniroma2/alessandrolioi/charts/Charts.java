@@ -18,8 +18,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
-// TODO generate a chart for every metrics (every classifier should be in the same chart)
-
 public class Charts {
     private final String project;
     private final List<CsvEntry> entries;
@@ -98,7 +96,6 @@ public class Charts {
                     "%s Comparison".formatted(category), category, entry.getKey(),
                     entry.getValue(), true);
             CategoryPlot plot = (CategoryPlot) chart.getPlot();
-            plot.getRangeAxis().setRange(-1f, 1f);
             BoxAndWhiskerRenderer renderer = (BoxAndWhiskerRenderer) plot.getRenderer();
             renderer.setMeanVisible(false);
             BufferedImage precisionImage = chart.createBufferedImage(800, 800);
