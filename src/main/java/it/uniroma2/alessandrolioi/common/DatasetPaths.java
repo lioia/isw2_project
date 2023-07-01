@@ -8,7 +8,6 @@ public class DatasetPaths {
         throw new IllegalStateException("Utility class");
     }
 
-    // TODO change to results/{project}
     public static Path fromProject(String project) {
         return Paths.get("dataset", project);
     }

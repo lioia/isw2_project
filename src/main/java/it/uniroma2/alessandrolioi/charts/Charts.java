@@ -18,6 +18,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
+// TODO generate a chart for every metrics (every classifier should be in the same chart)
+
 public class Charts {
     private final String project;
     private final List<CsvEntry> entries;
