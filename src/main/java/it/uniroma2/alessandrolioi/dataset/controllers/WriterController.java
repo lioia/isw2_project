@@ -17,26 +17,28 @@ import java.util.List;
 import java.util.Map;
 
 public class WriterController {
-    public void writeToFile(String project, List<Pair<JiraVersion, GitCommitEntry>> revisions,
-                            Map<String, List<DatasetEntry>> entries, int numberOfVersions) throws DatasetWriterException {
-        try {
-            Files.createDirectories(DatasetPaths.fromProject(project));
-
-            String header = writeHeader();
-            List<String> values = new ArrayList<>();
-            for (int i = 0; i < numberOfVersions; i++) {
-                GitCommitEntry revision = revisions.get(i).second();
-                for (String aClass : revision.classList()) {
-                    String value = writeEntry(i, aClass, entries.get(aClass).get(i));
-                    values.add(value);
-                }
+    public String writeToText(List<Pair<JiraVersion, GitCommitEntry>> revisions,
+                              Map<String, List<DatasetEntry>> entries, int numberOfVersions) {
+        String header = writeHeader();
+        List<String> values = new ArrayList<>();
+        for (int i = 0; i < numberOfVersions; i++) {
+            GitCommitEntry revision = revisions.get(i).second();
+            for (String aClass : revision.classList()) {
+                String value = writeEntry(i, aClass, entries.get(aClass).get(i));
+                values.add(value);
             }
-            String text = "%s%n%s".formatted(header, String.join("\n", values));
+        }
+        return "%s%n%s".formatted(header, String.join("\n", values));
+    }
 
-            Path output = DatasetPaths.fromProject(project).resolve("dataset.csv");
+    public void writeToFile(String project, String text, String name) throws DatasetWriterException {
+        try {
+            Path datasetFolder = DatasetPaths.fromProject(project).resolve("datasets");
+            Files.createDirectories(datasetFolder);
+            Path output = datasetFolder.resolve("%s.csv".formatted(name));
             Files.write(output, text.getBytes());
         } catch (IOException e) {
-            throw new DatasetWriterException("", e);
+            throw new DatasetWriterException("Could not write file", e);
         }
     }
 

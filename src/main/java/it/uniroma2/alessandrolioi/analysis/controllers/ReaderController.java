@@ -11,10 +11,10 @@ import java.nio.file.Path;
 import java.util.*;
 
 public class ReaderController {
-    public Map<Integer, List<CsvEntry>> loadCsv(String project) throws CsvException {
+    public Map<Integer, List<CsvEntry>> loadCsv(String project, String name) throws CsvException {
         try {
             Map<Integer, List<CsvEntry>> entries = new HashMap<>();
-            Path path = DatasetPaths.fromProject(project).resolve("dataset.csv");
+            Path path = DatasetPaths.fromProject(project).resolve("datasets").resolve(name);
             List<String> lines = Files.readAllLines(path);
             int version = 1;
             List<CsvEntry> versionEntries = new ArrayList<>();

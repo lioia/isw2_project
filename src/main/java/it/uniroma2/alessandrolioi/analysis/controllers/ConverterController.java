@@ -12,9 +12,10 @@ import java.nio.file.Paths;
 import java.util.*;
 
 public class ConverterController {
-    public void writeToArff(String project, Map<Integer, List<CsvEntry>> entries, int lastRelease) throws ArffException {
+    public void writeToArff(String project, Map<Integer, List<CsvEntry>> oracleEntries,
+                            Map<Integer, List<CsvEntry>> entries, int lastRelease) throws ArffException {
         List<String> attributes = Arrays.stream(Metric.values()).map(m -> "@attribute %s numeric".formatted(m.name())).toList();
-        List<String> testingData = entries.get(lastRelease).stream().map(this::entryFieldsToArff).toList();
+        List<String> testingData = oracleEntries.get(lastRelease).stream().map(this::entryFieldsToArff).toList();
         List<String> trainingData = new ArrayList<>();
         for (int i = 1; i < lastRelease; i++)
             trainingData.addAll(entries.get(i).stream().map(this::entryFieldsToArff).toList());
@@ -31,7 +32,9 @@ public class ConverterController {
     private void writeFile(String filename, String project, List<String> attributes, List<String> entries) throws IOException {
         if (!Files.exists(Paths.get("dataset")) || !Files.exists(DatasetPaths.fromProject(project)))
             throw new IOException("dataset folder does not exists");
-        Path path = DatasetPaths.fromProject(project).resolve(filename);
+        Path arffFolder = DatasetPaths.fromProject(project).resolve("arff");
+        Files.createDirectories(arffFolder);
+        Path path = arffFolder.resolve(filename);
         String text = "@relation %s%n".formatted(project) +
                 String.join("\n", attributes) + "\n" +
                 "@attribute Buggy {true,false}\n" +

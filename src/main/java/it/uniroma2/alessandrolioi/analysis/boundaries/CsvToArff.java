@@ -10,24 +10,26 @@ import java.util.*;
 
 public class CsvToArff {
     private final String project;
-    private final Map<Integer, List<CsvEntry>> entries;
+    private final Map<Integer, List<CsvEntry>> oracleEntries;
 
     public CsvToArff(String project) throws CsvException {
         this.project = project;
         ReaderController controller = new ReaderController();
-        this.entries = controller.loadCsv(project);
+        this.oracleEntries = controller.loadCsv(project, "oracle.csv");
     }
 
     public int getTotalReleases() throws CsvException {
-        Optional<Integer> total = entries.keySet().stream().max(Comparator.naturalOrder());
+        Optional<Integer> total = oracleEntries.keySet().stream().max(Comparator.naturalOrder());
         if (total.isEmpty()) throw new CsvException("Could not load total releases");
         return total.get();
     }
 
     public void convertToArff() throws CsvException, ArffException {
-        ConverterController controller = new ConverterController();
+        ReaderController readerController = new ReaderController();
+        ConverterController converterController = new ConverterController();
         for (int i = 2; i < getTotalReleases(); i++) {
-            controller.writeToArff(project, entries, i);
+            Map<Integer, List<CsvEntry>> entries = readerController.loadCsv(project, "%d.csv".formatted(i));
+            converterController.writeToArff(project, oracleEntries, entries, i);
         }
     }
 }

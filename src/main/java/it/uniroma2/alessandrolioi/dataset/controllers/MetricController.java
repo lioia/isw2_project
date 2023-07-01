@@ -13,13 +13,9 @@ import it.uniroma2.alessandrolioi.git.models.GitDiffEntry;
 import it.uniroma2.alessandrolioi.jira.models.JiraIssue;
 import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class MetricController {
 
@@ -138,12 +134,10 @@ public class MetricController {
                     MetricValue nrMetric = new MetricValue(aClass, i, Metric.NR, commits.size());
                     func.apply(nrMetric);
 
-                    // Age: calculated as ((lastCommitTime - firstCommitTime) / (currentReleaseTime - lastReleaseTime))
-                    List<LocalDateTime> commitDates = new ArrayList<>(commits.stream().map(GitCommitEntry::commitDate).toList());
-                    commitDates.addAll(List.of(previous.commitDate(), current.second().commitDate()));
-                    double age = calculateAge(previous.commitDate(), current.second().commitDate(), commitDates);
-                    MetricValue ageMetric = new MetricValue(aClass, i, Metric.AGE, age);
-                    func.apply(ageMetric);
+                    // NAuth
+                    int numberOfAuthors = commits.stream().map(GitCommitEntry::author).collect(Collectors.toSet()).size();
+                    MetricValue nAuthMetric = new MetricValue(aClass, i, Metric.N_AUTH, numberOfAuthors);
+                    func.apply(nAuthMetric);
 
                     // NFix
                     List<String> hashes = new ArrayList<>(commits.stream().map(GitCommitEntry::hash).toList());
@@ -160,18 +154,5 @@ public class MetricController {
         } catch (GitLogException e) {
             throw new MetricException(e);
         }
-    }
-
-    private double calculateAge(LocalDateTime previousVersion, LocalDateTime currentVersion, List<LocalDateTime> commits) {
-        double age = 0.0;
-        if (!commits.isEmpty()) {
-            commits.sort(Comparator.naturalOrder());
-            LocalDateTime first = commits.get(0);
-            LocalDateTime last = commits.get(commits.size() - 1);
-            double totalTime = (double) previousVersion.toEpochSecond(ZoneOffset.UTC) - currentVersion.toEpochSecond(ZoneOffset.UTC);
-            double time = (double) last.toEpochSecond(ZoneOffset.UTC) - first.toEpochSecond(ZoneOffset.UTC);
-            age = Math.abs(time / totalTime);
-        }
-        return age;
     }
 }
