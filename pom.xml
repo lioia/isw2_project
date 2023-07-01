@@ -52,5 +52,12 @@
             <artifactId>SMOTE</artifactId>
             <version>1.0.3</version>
         </dependency>
+        <!-- Package used for creating Charts -->
+        <!-- https://mvnrepository.com/artifact/jfree/jfreechart -->
+        <dependency>
+            <groupId>org.jfree</groupId>
+            <artifactId>jfreechart</artifactId>
+            <version>1.5.4</version>
+        </dependency>
     </dependencies>
 </project>

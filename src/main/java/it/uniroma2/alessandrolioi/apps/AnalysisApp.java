@@ -11,8 +11,8 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class CsvAnalysis {
-    private static final Logger logger = Logger.getLogger("CsvAnalysis");
+public class AnalysisApp {
+    private static final Logger logger = Logger.getLogger("Analysis");
 
     public static void main(String[] args) {
         for (String project : Projects.names()) {
