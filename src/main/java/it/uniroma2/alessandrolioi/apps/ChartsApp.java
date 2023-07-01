@@ -12,7 +12,6 @@ public class ChartsApp {
     public static void main(String[] args) {
         for (String project : Projects.names()) {
             try {
-                // TODO: check if the charts are created correctly
                 Charts charts = new Charts(project);
                 charts.generateClassifierComparison();
                 charts.generateFeatureSelectionComparison();
