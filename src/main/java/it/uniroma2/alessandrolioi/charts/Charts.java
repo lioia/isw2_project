@@ -3,12 +3,11 @@ package it.uniroma2.alessandrolioi.charts;
 import it.uniroma2.alessandrolioi.analysis.models.AnalysisType;
 import it.uniroma2.alessandrolioi.charts.controllers.ReaderController;
 import it.uniroma2.alessandrolioi.charts.exceptions.ReaderException;
+import it.uniroma2.alessandrolioi.charts.extensions.CustomBoxAndWhiskerRenderer;
 import it.uniroma2.alessandrolioi.charts.models.CsvEntry;
 import it.uniroma2.alessandrolioi.common.DatasetPaths;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.plot.CategoryPlot;
-import org.jfree.chart.renderer.category.BoxAndWhiskerRenderer;
 import org.jfree.data.statistics.DefaultBoxAndWhiskerCategoryDataset;
 
 import javax.imageio.ImageIO;
@@ -95,14 +94,13 @@ public class Charts {
             JFreeChart chart = ChartFactory.createBoxAndWhiskerChart(
                     "%s Comparison".formatted(category), category, entry.getKey(),
                     entry.getValue(), true);
-            CategoryPlot plot = (CategoryPlot) chart.getPlot();
-            BoxAndWhiskerRenderer renderer = (BoxAndWhiskerRenderer) plot.getRenderer();
-            renderer.setMeanVisible(false);
-            BufferedImage precisionImage = chart.createBufferedImage(800, 800);
+            CustomBoxAndWhiskerRenderer renderer = new CustomBoxAndWhiskerRenderer();
+            chart.getCategoryPlot().setRenderer(renderer);
+            BufferedImage image = chart.createBufferedImage(800, 800);
             Path folderPath = DatasetPaths.fromProject(project).resolve(folder);
             if (!Files.exists(folderPath)) Files.createDirectory(folderPath);
             Path path = folderPath.resolve("%s.png".formatted(entry.getKey()));
-            ImageIO.write(precisionImage, "png", path.toFile());
+            ImageIO.write(image, "png", path.toFile());
         }
     }
 }
