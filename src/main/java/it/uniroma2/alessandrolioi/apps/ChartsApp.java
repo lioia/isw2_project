@@ -13,7 +13,7 @@ public class ChartsApp {
         for (String project : Projects.names()) {
             try {
                 Charts charts = new Charts(project);
-                charts.generateClassifierComparison();
+                charts.generateNoFilterComparison();
                 charts.generateFeatureSelectionComparison();
                 charts.generateSamplingComparison();
                 charts.generateCostSensitiveComparison();

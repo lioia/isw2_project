@@ -27,36 +27,45 @@ public class Charts {
         this.entries = controller.readCsv(project);
     }
 
-    public void generateClassifierComparison() throws IOException {
+    public void generateNoFilterComparison() throws IOException {
         Map<String, DefaultBoxAndWhiskerCategoryDataset> datasets = createEmptyDatasets();
-        populateDatasets(datasets, entries, "");
-        createImages("Classifier", "classifier", datasets);
+        List<CsvEntry> filter = entries.stream().filter(e ->
+                e.featureSelection() == AnalysisType.FeatureSelection.NONE &&
+                        e.sampling() == AnalysisType.Sampling.NONE &&
+                        e.costSensitive() == AnalysisType.CostSensitive.NONE
+        ).toList();
+        populateDatasets(datasets, filter, "");
+        createImages("No Filter", "no_filter", datasets);
     }
 
     public void generateFeatureSelectionComparison() throws IOException {
         Map<String, DefaultBoxAndWhiskerCategoryDataset> datasets = createEmptyDatasets();
-        for (AnalysisType.FeatureSelection featureSelection : AnalysisType.FeatureSelection.values()) {
-            List<CsvEntry> filter = entries.stream().filter(e -> e.featureSelection() == featureSelection).toList();
-            populateDatasets(datasets, filter, featureSelection.name());
-        }
+        List<CsvEntry> filter = entries.stream().filter(e ->
+                e.featureSelection() == AnalysisType.FeatureSelection.BEST_FIRST &&
+                        e.sampling() == AnalysisType.Sampling.NONE &&
+                        e.costSensitive() == AnalysisType.CostSensitive.NONE
+        ).toList();
+        populateDatasets(datasets, filter, AnalysisType.FeatureSelection.BEST_FIRST.name());
         createImages("Feature Selection", "feature_selection", datasets);
     }
 
     public void generateSamplingComparison() throws IOException {
         Map<String, DefaultBoxAndWhiskerCategoryDataset> datasets = createEmptyDatasets();
-        for (AnalysisType.Sampling sampling : AnalysisType.Sampling.values()) {
-            List<CsvEntry> filter = entries.stream().filter(e -> e.sampling() == sampling).toList();
-            populateDatasets(datasets, filter, sampling.name());
-        }
-        createImages("Sampling", "sampling", datasets);
+        List<CsvEntry> filter = entries.stream().filter(e ->
+                e.featureSelection() == AnalysisType.FeatureSelection.BEST_FIRST &&
+                        e.sampling() == AnalysisType.Sampling.SMOTE
+        ).toList();
+        populateDatasets(datasets, filter, AnalysisType.Sampling.SMOTE.name());
+        createImages("Balancing", "sampling", datasets);
     }
 
     public void generateCostSensitiveComparison() throws IOException {
         Map<String, DefaultBoxAndWhiskerCategoryDataset> datasets = createEmptyDatasets();
-        for (AnalysisType.CostSensitive costSensitive : AnalysisType.CostSensitive.values()) {
-            List<CsvEntry> filter = entries.stream().filter(e -> e.costSensitive() == costSensitive).toList();
-            populateDatasets(datasets, filter, costSensitive.name());
-        }
+        List<CsvEntry> filter = entries.stream().filter(e ->
+                e.featureSelection() == AnalysisType.FeatureSelection.BEST_FIRST &&
+                        e.costSensitive() == AnalysisType.CostSensitive.COST_SENSITIVE_THRESHOLD
+        ).toList();
+        populateDatasets(datasets, filter, AnalysisType.CostSensitive.COST_SENSITIVE_THRESHOLD.name());
         createImages("Cost Sensitive", "cost_sensitive", datasets);
     }
 

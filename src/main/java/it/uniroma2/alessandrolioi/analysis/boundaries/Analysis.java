@@ -40,17 +40,32 @@ public class Analysis {
         List<Report> reports = new ArrayList<>();
         for (AnalysisType.FeatureSelection featureSelection : AnalysisType.FeatureSelection.values()) {
             applyFeatureSelection(featureSelection);
-            for (AnalysisType.Sampling sampling : AnalysisType.Sampling.values()) {
-                applySampling(sampling);
-                for (AnalysisType.CostSensitive costSensitive : AnalysisType.CostSensitive.values()) {
-                    for (AnalysisType.Classifiers classifierType : AnalysisType.Classifiers.values()) {
-                        Classifier classifier = selectClassifier(classifierType);
-                        classifier = applyCostSensitive(costSensitive, classifier);
-                        Evaluation evaluation = analyze(classifier);
-                        Report report = generateReport(evaluation, classifierType, featureSelection, sampling, costSensitive);
-                        reports.add(report);
-                    }
-                }
+            // No Balancing, No Cost Sensitive
+            for (AnalysisType.Classifiers classifierType : AnalysisType.Classifiers.values()) {
+                applySampling(AnalysisType.Sampling.NONE);
+                Classifier classifier = selectClassifier(classifierType);
+                classifier = applyCostSensitive(AnalysisType.CostSensitive.NONE, classifier);
+                Evaluation evaluation = analyze(classifier);
+                Report report = generateReport(evaluation, classifierType, featureSelection, AnalysisType.Sampling.NONE, AnalysisType.CostSensitive.NONE);
+                reports.add(report);
+            }
+            // SMOTE Balancing, No Cost Sensitive
+            for (AnalysisType.Classifiers classifierType : AnalysisType.Classifiers.values()) {
+                applySampling(AnalysisType.Sampling.SMOTE);
+                Classifier classifier = selectClassifier(classifierType);
+                classifier = applyCostSensitive(AnalysisType.CostSensitive.NONE, classifier);
+                Evaluation evaluation = analyze(classifier);
+                Report report = generateReport(evaluation, classifierType, featureSelection, AnalysisType.Sampling.SMOTE, AnalysisType.CostSensitive.NONE);
+                reports.add(report);
+            }
+            // No Balancing, Cost Sensitive Threshold
+            for (AnalysisType.Classifiers classifierType : AnalysisType.Classifiers.values()) {
+                applySampling(AnalysisType.Sampling.NONE);
+                Classifier classifier = selectClassifier(classifierType);
+                classifier = applyCostSensitive(AnalysisType.CostSensitive.COST_SENSITIVE_THRESHOLD, classifier);
+                Evaluation evaluation = analyze(classifier);
+                Report report = generateReport(evaluation, classifierType, featureSelection, AnalysisType.Sampling.NONE, AnalysisType.CostSensitive.COST_SENSITIVE_THRESHOLD);
+                reports.add(report);
             }
         }
         return reports;
