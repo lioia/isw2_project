@@ -11,11 +11,13 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.data.statistics.DefaultBoxAndWhiskerCategoryDataset;
 
 import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.List;
 
 public class Charts {
     private final String project;
@@ -35,7 +37,7 @@ public class Charts {
                         e.costSensitive() == AnalysisType.CostSensitive.NONE
         ).toList();
         populateDatasets(datasets, filter, "");
-        createImages("No Filter", "no_filter", datasets);
+        createImages("no_filter", datasets);
     }
 
     public void generateFeatureSelectionComparison() throws IOException {
@@ -46,7 +48,7 @@ public class Charts {
                         e.costSensitive() == AnalysisType.CostSensitive.NONE
         ).toList();
         populateDatasets(datasets, filter, AnalysisType.FeatureSelection.BEST_FIRST.name());
-        createImages("Feature Selection", "feature_selection", datasets);
+        createImages("feature_selection", datasets);
     }
 
     public void generateSamplingComparison() throws IOException {
@@ -56,7 +58,7 @@ public class Charts {
                         e.sampling() == AnalysisType.Sampling.SMOTE
         ).toList();
         populateDatasets(datasets, filter, AnalysisType.Sampling.SMOTE.name());
-        createImages("Balancing", "sampling", datasets);
+        createImages("sampling", datasets);
     }
 
     public void generateCostSensitiveComparison() throws IOException {
@@ -66,7 +68,7 @@ public class Charts {
                         e.costSensitive() == AnalysisType.CostSensitive.COST_SENSITIVE_THRESHOLD
         ).toList();
         populateDatasets(datasets, filter, AnalysisType.CostSensitive.COST_SENSITIVE_THRESHOLD.name());
-        createImages("Cost Sensitive", "cost_sensitive", datasets);
+        createImages("cost_sensitive", datasets);
     }
 
     private Map<String, DefaultBoxAndWhiskerCategoryDataset> createEmptyDatasets() {
@@ -98,14 +100,14 @@ public class Charts {
         }
     }
 
-    private void createImages(String category, String folder, Map<String, DefaultBoxAndWhiskerCategoryDataset> datasets) throws IOException {
+    private void createImages(String folder, Map<String, DefaultBoxAndWhiskerCategoryDataset> datasets) throws IOException {
         for (Map.Entry<String, DefaultBoxAndWhiskerCategoryDataset> entry : datasets.entrySet()) {
-            JFreeChart chart = ChartFactory.createBoxAndWhiskerChart(
-                    "%s Comparison".formatted(category), category, entry.getKey(),
-                    entry.getValue(), true);
+            JFreeChart chart = ChartFactory.createBoxAndWhiskerChart("", "", entry.getKey(), entry.getValue(), true);
             CustomBoxAndWhiskerRenderer renderer = new CustomBoxAndWhiskerRenderer();
             chart.getCategoryPlot().setRenderer(renderer);
-            BufferedImage image = chart.createBufferedImage(800, 800);
+            Font font = new Font("Tahoma", Font.PLAIN, 20);
+            chart.getCategoryPlot().getRangeAxis().setLabelFont(font);
+            BufferedImage image = chart.createBufferedImage(500, 500);
             Path folderPath = DatasetPaths.fromProject(project).resolve(folder);
             if (!Files.exists(folderPath)) Files.createDirectory(folderPath);
             Path path = folderPath.resolve("%s.png".formatted(entry.getKey()));
