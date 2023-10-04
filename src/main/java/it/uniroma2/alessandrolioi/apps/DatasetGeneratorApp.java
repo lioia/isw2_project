@@ -27,17 +27,17 @@ public class DatasetGeneratorApp {
             List<String> coldStarts = new ArrayList<>(Arrays.asList(Projects.coldStarts()));
             coldStarts.add(other);
 
-            projectGeneration(project, coldStarts);
+            projectGeneration(project, Projects.additionalParams()[i], coldStarts);
         }
     }
 
-    private static void projectGeneration(String project, List<String> coldStartProjects) throws IOException {
+    private static void projectGeneration(String project, String additionalParams, List<String> coldStartProjects) throws IOException {
         Git git = null;
         try {
-            Jira jiraProject = new Jira(project);
+            Jira jiraProject = new Jira(project, additionalParams);
             List<Double> coldStarts = new ArrayList<>();
             for (String coldStartProject : coldStartProjects) {
-                Jira jiraColdStartProject = new Jira(coldStartProject);
+                Jira jiraColdStartProject = new Jira(coldStartProject, "");
                 double coldStart = jiraColdStartProject.calculateColdStart();
                 coldStarts.add(coldStart);
             }

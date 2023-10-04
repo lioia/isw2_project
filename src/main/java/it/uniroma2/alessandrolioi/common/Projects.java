@@ -9,6 +9,10 @@ public class Projects {
         return new String[]{"bookkeeper", "avro"};
     }
 
+    public static String[] additionalParams() {
+        return new String[]{"", "AND component  in (Java, JAVA, java)"};
+    }
+
     public static String[] coldStarts() {
         return new String[]{"openjpa", "storm", "zookeeper", "syncope", "tajo"};
     }

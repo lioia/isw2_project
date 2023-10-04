@@ -11,7 +11,7 @@ import java.time.LocalDate;
 import java.util.*;
 
 public class JiraIssueController {
-    public List<JiraIssue> loadIssues(String project, LocalDate firstVersion, LocalDate lastVersion) throws JiraRestException {
+    public List<JiraIssue> loadIssues(String project, String additionalParams, LocalDate firstVersion, LocalDate lastVersion) throws JiraRestException {
         List<JiraIssue> issues = new ArrayList<>();
         int total;
         int totalDecrement = 0; // total skipped issues (missing required fields)
@@ -22,6 +22,7 @@ public class JiraIssueController {
                     " AND issueType=Bug AND(status=closed OR status=resolved)AND resolution=fixed" + // query to get all bug fix issues
                     // select issues resolved in [firstVersion, lastVersion]
                     " AND resolved>=%s AND resolved<=%s".formatted(firstVersion.toString(), lastVersion.toString()) +
+                    " %s".formatted(additionalParams) +
                     "&fields=" + String.join(",", JiraIssue.getFields()) + // fields
                     "&startAt=" + startAt + // pagination offset
                     "&maxResults=1000"; // max results loaded

@@ -17,8 +17,8 @@ public class Jira {
     private final List<JiraVersion> versions;
     private final List<JiraIssue> issues;
 
-    public Jira(String project) throws JiraRestException {
-        if(logger.isLoggable(Level.INFO))
+    public Jira(String project, String additionalParams) throws JiraRestException {
+        if (logger.isLoggable(Level.INFO))
             logger.info("Loading versions and tickets");
         JiraVersionController versionController = new JiraVersionController();
         JiraIssueController issueController = new JiraIssueController();
@@ -28,10 +28,10 @@ public class Jira {
         JiraVersion first = versions.get(0);
         JiraVersion last = versions.get(versions.size() - 1);
         // Load issues from Jira API from the first and last version considered
-        issues = issueController.loadIssues(project, first.releaseDate(), last.releaseDate());
+        issues = issueController.loadIssues(project, additionalParams, first.releaseDate(), last.releaseDate());
         // Initial version classification
         issueController.classifyIssues(versions, issues);
-        if(logger.isLoggable(Level.INFO))
+        if (logger.isLoggable(Level.INFO))
             logger.info("Versions and tickets successfully loaded");
     }
 

@@ -49,6 +49,15 @@ public class Analysis {
                 Report report = generateReport(evaluation, classifierType, featureSelection, AnalysisType.Sampling.NONE, AnalysisType.CostSensitive.NONE);
                 reports.add(report);
             }
+            // Over Sampling Balancing, No Cost Sensitive
+            for (AnalysisType.Classifiers classifierType : AnalysisType.Classifiers.values()) {
+                applySampling(AnalysisType.Sampling.OVER_SAMPLING);
+                Classifier classifier = selectClassifier(classifierType);
+                classifier = applyCostSensitive(AnalysisType.CostSensitive.NONE, classifier);
+                Evaluation evaluation = analyze(classifier);
+                Report report = generateReport(evaluation, classifierType, featureSelection, AnalysisType.Sampling.OVER_SAMPLING, AnalysisType.CostSensitive.NONE);
+                reports.add(report);
+            }
             // SMOTE Balancing, No Cost Sensitive
             for (AnalysisType.Classifiers classifierType : AnalysisType.Classifiers.values()) {
                 applySampling(AnalysisType.Sampling.SMOTE);

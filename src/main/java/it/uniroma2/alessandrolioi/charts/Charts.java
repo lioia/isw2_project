@@ -52,13 +52,15 @@ public class Charts {
     }
 
     public void generateSamplingComparison() throws IOException {
-        Map<String, DefaultBoxAndWhiskerCategoryDataset> datasets = createEmptyDatasets();
-        List<CsvEntry> filter = entries.stream().filter(e ->
-                e.featureSelection() == AnalysisType.FeatureSelection.BEST_FIRST &&
-                        e.sampling() == AnalysisType.Sampling.SMOTE
-        ).toList();
-        populateDatasets(datasets, filter, AnalysisType.Sampling.SMOTE.name());
-        createImages("sampling", datasets);
+        for (AnalysisType.Sampling sampling : AnalysisType.Sampling.values()) {
+            Map<String, DefaultBoxAndWhiskerCategoryDataset> datasets = createEmptyDatasets();
+            List<CsvEntry> filter = entries.stream().filter(e ->
+                    e.featureSelection() == AnalysisType.FeatureSelection.BEST_FIRST &&
+                            e.sampling() == sampling
+            ).toList();
+            populateDatasets(datasets, filter, AnalysisType.Sampling.SMOTE.name());
+            createImages("sampling_" + sampling, datasets);
+        }
     }
 
     public void generateCostSensitiveComparison() throws IOException {
