@@ -36,7 +36,7 @@ public class Charts {
                         e.sampling() == AnalysisType.Sampling.NONE
         ).toList();
         populateDatasets(datasets, filter, "");
-        createImages("no_filter", datasets);
+        createImages("fs_none", datasets);
     }
 
     public void generateFeatureSelectionComparison() throws IOException {
@@ -46,18 +46,19 @@ public class Charts {
                         e.sampling() == AnalysisType.Sampling.NONE
         ).toList();
         populateDatasets(datasets, filter, AnalysisType.FeatureSelection.BEST_FIRST.name());
-        createImages("feature_selection", datasets);
+        createImages("fs_best_first", datasets);
     }
 
     public void generateSamplingComparison() throws IOException {
         for (AnalysisType.Sampling sampling : AnalysisType.Sampling.values()) {
+            if (sampling == AnalysisType.Sampling.NONE) continue;
             Map<String, DefaultBoxAndWhiskerCategoryDataset> datasets = createEmptyDatasets();
             List<CsvEntry> filter = entries.stream().filter(e ->
                     e.featureSelection() == AnalysisType.FeatureSelection.BEST_FIRST &&
                             e.sampling() == sampling
             ).toList();
             populateDatasets(datasets, filter, AnalysisType.Sampling.SMOTE.name());
-            createImages("sampling_" + sampling, datasets);
+            createImages("sampling_" + sampling.name().toLowerCase(), datasets);
         }
     }
 
@@ -103,5 +104,37 @@ public class Charts {
             Path path = folderPath.resolve("%s.png".formatted(entry.getKey()));
             ImageIO.write(image, "png", path.toFile());
         }
+    }
+
+    public void generateFinalImages() throws IOException {
+        for (AnalysisType.Sampling sampling : AnalysisType.Sampling.values()) {
+            if (sampling == AnalysisType.Sampling.NONE) continue;
+            String folder = "sampling_%s".formatted(sampling.name().toLowerCase());
+            Path path = DatasetPaths.fromProject(project).resolve(folder);
+            combineImages(path);
+        }
+        for (AnalysisType.FeatureSelection featureSelection : AnalysisType.FeatureSelection.values()) {
+            String folder = "fs_%s".formatted(featureSelection.name().toLowerCase());
+            Path path = DatasetPaths.fromProject(project).resolve(folder);
+            combineImages(path);
+        }
+    }
+
+    private void combineImages(Path folder) throws IOException {
+        BufferedImage precision = ImageIO.read(folder.resolve("Precision.png").toFile());
+        BufferedImage recall = ImageIO.read(folder.resolve("Recall.png").toFile());
+        BufferedImage auc = ImageIO.read(folder.resolve("AUC.png").toFile());
+        BufferedImage kappa = ImageIO.read(folder.resolve("Kappa.png").toFile());
+        BufferedImage output = new BufferedImage(1000, 1000, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = output.createGraphics();
+
+        g.drawImage(precision, 0, 0, null);
+        g.drawImage(recall, 500, 0, null);
+        g.drawImage(kappa, 0, 500, null);
+        g.drawImage(auc, 500, 500, null);
+
+        g.dispose();
+
+        ImageIO.write(output, "png", folder.resolve("output.png").toFile());
     }
 }
