@@ -7,16 +7,15 @@ import it.uniroma2.alessandrolioi.analysis.models.Report;
 import weka.attributeSelection.BestFirst;
 import weka.attributeSelection.CfsSubsetEval;
 import weka.classifiers.Classifier;
-import weka.classifiers.CostMatrix;
 import weka.classifiers.Evaluation;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.lazy.IBk;
-import weka.classifiers.meta.CostSensitiveClassifier;
 import weka.classifiers.trees.RandomForest;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.filters.Filter;
 import weka.filters.supervised.attribute.AttributeSelection;
+import weka.filters.supervised.instance.SpreadSubsample;
 import weka.filters.supervised.instance.Resample;
 import weka.filters.supervised.instance.SMOTE;
 
@@ -29,51 +28,32 @@ public class Analysis {
     private Instances testing;
     private Instances training;
 
-    public Analysis(String project, int lastRelease) throws ArffException {
+    public Analysis(String project, int lastRelease) {
         this.project = project;
         this.lastRelease = lastRelease;
-
-        loadInstances();
     }
 
-    public List<Report> performAnalysis() throws ClassifierException, EvaluationException, FeatureSelectionException, SamplingException {
+    public List<Report> performAnalysis() throws ClassifierException, EvaluationException, FeatureSelectionException, SamplingException, ArffException {
         List<Report> reports = new ArrayList<>();
-        for (AnalysisType.FeatureSelection featureSelection : AnalysisType.FeatureSelection.values()) {
-            applyFeatureSelection(featureSelection);
-            // No Balancing, No Cost Sensitive
+        // No Feature Selection, No Balancing, No Cost Sensitive
+        for (AnalysisType.Classifiers classifierType : AnalysisType.Classifiers.values()) {
+            loadInstances();
+            applyFeatureSelection(AnalysisType.FeatureSelection.NONE);
+            applySampling(AnalysisType.Sampling.NONE);
+            Classifier classifier = selectClassifier(classifierType);
+            Evaluation evaluation = analyze(classifier);
+            Report report = generateReport(evaluation, classifierType, AnalysisType.FeatureSelection.NONE, AnalysisType.Sampling.NONE);
+            reports.add(report);
+        }
+        // Feature Selection, Balancing, No Cost Sensitive
+        for (AnalysisType.Sampling sampling : AnalysisType.Sampling.values()) {
             for (AnalysisType.Classifiers classifierType : AnalysisType.Classifiers.values()) {
-                applySampling(AnalysisType.Sampling.NONE);
+                loadInstances();
+                applyFeatureSelection(AnalysisType.FeatureSelection.BEST_FIRST);
+                applySampling(sampling);
                 Classifier classifier = selectClassifier(classifierType);
-                classifier = applyCostSensitive(AnalysisType.CostSensitive.NONE, classifier);
                 Evaluation evaluation = analyze(classifier);
-                Report report = generateReport(evaluation, classifierType, featureSelection, AnalysisType.Sampling.NONE, AnalysisType.CostSensitive.NONE);
-                reports.add(report);
-            }
-            // Over Sampling Balancing, No Cost Sensitive
-            for (AnalysisType.Classifiers classifierType : AnalysisType.Classifiers.values()) {
-                applySampling(AnalysisType.Sampling.OVER_SAMPLING);
-                Classifier classifier = selectClassifier(classifierType);
-                classifier = applyCostSensitive(AnalysisType.CostSensitive.NONE, classifier);
-                Evaluation evaluation = analyze(classifier);
-                Report report = generateReport(evaluation, classifierType, featureSelection, AnalysisType.Sampling.OVER_SAMPLING, AnalysisType.CostSensitive.NONE);
-                reports.add(report);
-            }
-            // SMOTE Balancing, No Cost Sensitive
-            for (AnalysisType.Classifiers classifierType : AnalysisType.Classifiers.values()) {
-                applySampling(AnalysisType.Sampling.SMOTE);
-                Classifier classifier = selectClassifier(classifierType);
-                classifier = applyCostSensitive(AnalysisType.CostSensitive.NONE, classifier);
-                Evaluation evaluation = analyze(classifier);
-                Report report = generateReport(evaluation, classifierType, featureSelection, AnalysisType.Sampling.SMOTE, AnalysisType.CostSensitive.NONE);
-                reports.add(report);
-            }
-            // No Balancing, Cost Sensitive Threshold
-            for (AnalysisType.Classifiers classifierType : AnalysisType.Classifiers.values()) {
-                applySampling(AnalysisType.Sampling.NONE);
-                Classifier classifier = selectClassifier(classifierType);
-                classifier = applyCostSensitive(AnalysisType.CostSensitive.COST_SENSITIVE_THRESHOLD, classifier);
-                Evaluation evaluation = analyze(classifier);
-                Report report = generateReport(evaluation, classifierType, featureSelection, AnalysisType.Sampling.NONE, AnalysisType.CostSensitive.COST_SENSITIVE_THRESHOLD);
+                Report report = generateReport(evaluation, classifierType, AnalysisType.FeatureSelection.BEST_FIRST, sampling);
                 reports.add(report);
             }
         }
@@ -120,6 +100,16 @@ public class Analysis {
             case NONE -> {
                 // does not need to apply anything
             }
+            case UNDER_SAMPLING -> {
+                try {
+                    SpreadSubsample underSample = new SpreadSubsample();
+                    underSample.setInputFormat(training);
+                    underSample.setDistributionSpread(1.0);
+                    training = Filter.useFilter(training, underSample);
+                } catch (Exception e) {
+                    throw new SamplingException("Could not apply Under Sampling", e);
+                }
+            }
             case OVER_SAMPLING -> {
                 try {
                     Resample overSample = new Resample();
@@ -142,22 +132,6 @@ public class Analysis {
                     throw new SamplingException("Could not apply SMOTE", e);
                 }
             }
-        }
-    }
-
-    private Classifier applyCostSensitive(AnalysisType.CostSensitive costSensitive, Classifier classifier) {
-        if (costSensitive == AnalysisType.CostSensitive.COST_SENSITIVE_THRESHOLD) {
-            CostMatrix matrix = new CostMatrix(2);
-            matrix.setCell(0, 0, 0.0);
-            matrix.setCell(0, 1, 1.0);
-            matrix.setCell(1, 0, 10.0);
-            matrix.setCell(1, 1, 0.0);
-            CostSensitiveClassifier costSensitiveClassifier = new CostSensitiveClassifier();
-            costSensitiveClassifier.setCostMatrix(matrix);
-            costSensitiveClassifier.setClassifier(classifier);
-            return costSensitiveClassifier;
-        } else {
-            return classifier;
         }
     }
 
@@ -186,13 +160,12 @@ public class Analysis {
     }
 
     private Report generateReport(Evaluation evaluation, AnalysisType.Classifiers classifierType,
-                                  AnalysisType.FeatureSelection featureSelection, AnalysisType.Sampling sampling,
-                                  AnalysisType.CostSensitive costSensitive) {
+                                  AnalysisType.FeatureSelection featureSelection, AnalysisType.Sampling sampling) {
         double auc = evaluation.areaUnderROC(1);
         if (Double.isNaN(auc)) auc = 0;
         return new Report(
                 lastRelease,
-                classifierType, featureSelection, sampling, costSensitive,
+                classifierType, featureSelection, sampling,
                 evaluation.precision(1),
                 evaluation.recall(1),
                 auc,

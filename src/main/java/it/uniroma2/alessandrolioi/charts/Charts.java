@@ -33,8 +33,7 @@ public class Charts {
         Map<String, DefaultBoxAndWhiskerCategoryDataset> datasets = createEmptyDatasets();
         List<CsvEntry> filter = entries.stream().filter(e ->
                 e.featureSelection() == AnalysisType.FeatureSelection.NONE &&
-                        e.sampling() == AnalysisType.Sampling.NONE &&
-                        e.costSensitive() == AnalysisType.CostSensitive.NONE
+                        e.sampling() == AnalysisType.Sampling.NONE
         ).toList();
         populateDatasets(datasets, filter, "");
         createImages("no_filter", datasets);
@@ -44,8 +43,7 @@ public class Charts {
         Map<String, DefaultBoxAndWhiskerCategoryDataset> datasets = createEmptyDatasets();
         List<CsvEntry> filter = entries.stream().filter(e ->
                 e.featureSelection() == AnalysisType.FeatureSelection.BEST_FIRST &&
-                        e.sampling() == AnalysisType.Sampling.NONE &&
-                        e.costSensitive() == AnalysisType.CostSensitive.NONE
+                        e.sampling() == AnalysisType.Sampling.NONE
         ).toList();
         populateDatasets(datasets, filter, AnalysisType.FeatureSelection.BEST_FIRST.name());
         createImages("feature_selection", datasets);
@@ -61,16 +59,6 @@ public class Charts {
             populateDatasets(datasets, filter, AnalysisType.Sampling.SMOTE.name());
             createImages("sampling_" + sampling, datasets);
         }
-    }
-
-    public void generateCostSensitiveComparison() throws IOException {
-        Map<String, DefaultBoxAndWhiskerCategoryDataset> datasets = createEmptyDatasets();
-        List<CsvEntry> filter = entries.stream().filter(e ->
-                e.featureSelection() == AnalysisType.FeatureSelection.BEST_FIRST &&
-                        e.costSensitive() == AnalysisType.CostSensitive.COST_SENSITIVE_THRESHOLD
-        ).toList();
-        populateDatasets(datasets, filter, AnalysisType.CostSensitive.COST_SENSITIVE_THRESHOLD.name());
-        createImages("cost_sensitive", datasets);
     }
 
     private Map<String, DefaultBoxAndWhiskerCategoryDataset> createEmptyDatasets() {

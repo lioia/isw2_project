@@ -10,6 +10,8 @@ import it.uniroma2.alessandrolioi.jira.Jira;
 import it.uniroma2.alessandrolioi.jira.models.JiraVersion;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -45,7 +47,11 @@ public class DatasetGeneratorApp {
             // Get Median
             jiraProject.applyProportion(coldStarts.get(coldStarts.size() / 2));
 
-            git = new Git(project, "https://github.com/apache/%s".formatted(project), "master");
+            Path projectPath = Paths.get(project);
+            if (projectPath.toFile().exists() && projectPath.resolve(".git").toFile().exists())
+                git = new Git(project);
+            else
+                git = new Git(project, "https://github.com/apache/%s".formatted(project), "master");
 
             if (logger.isLoggable(Level.INFO))
                 logger.info("Loading integration between Jira and Git");

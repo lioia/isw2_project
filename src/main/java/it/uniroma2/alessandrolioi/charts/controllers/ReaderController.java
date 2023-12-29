@@ -23,12 +23,11 @@ public class ReaderController {
                 AnalysisType.Classifiers classifier = AnalysisType.Classifiers.valueOf(line[2]);
                 AnalysisType.FeatureSelection featureSelection = AnalysisType.FeatureSelection.valueOf(line[3]);
                 AnalysisType.Sampling sampling = AnalysisType.Sampling.valueOf(line[4]);
-                AnalysisType.CostSensitive costSensitive = AnalysisType.CostSensitive.valueOf(line[5]);
-                double precision = Double.parseDouble(line[6]);
-                double recall = Double.parseDouble(line[7]);
-                double kappa = Double.parseDouble(line[8]);
-                double auc = Double.parseDouble(line[9]);
-                CsvEntry entry = new CsvEntry(version, classifier, featureSelection, sampling, costSensitive, precision, recall, kappa, auc);
+                double precision = Double.parseDouble(line[5]);
+                double recall = Double.parseDouble(line[6]);
+                double kappa = Double.parseDouble(line[7]);
+                double auc = Double.parseDouble(line[8]);
+                CsvEntry entry = new CsvEntry(version, classifier, featureSelection, sampling, precision, recall, kappa, auc);
                 entries.add(entry);
             }
             return entries;

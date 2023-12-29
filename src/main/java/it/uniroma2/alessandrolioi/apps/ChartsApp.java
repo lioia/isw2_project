@@ -16,7 +16,6 @@ public class ChartsApp {
                 charts.generateNoFilterComparison();
                 charts.generateFeatureSelectionComparison();
                 charts.generateSamplingComparison();
-                charts.generateCostSensitiveComparison();
             } catch (Exception e) {
                 if (logger.isLoggable(Level.SEVERE))
                     logger.severe(e.getMessage());
